@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ai-auto-gauss-DFT</title>
+    <script>
+      // Node-global shims for Ketcher/Indigo deps (util, assert) in the browser.
+      window.process = window.process || { env: {}, browser: true };
+      window.global = window.global || window;
+      window.Buffer = window.Buffer || { from: (x) => x, isBuffer: () => false };
+    </script>
+    <script src="https://3Dmol.org/build/3Dmol-min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

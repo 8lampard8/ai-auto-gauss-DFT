@@ -1,0 +1,2 @@
+"""ai-auto-gauss-DFT backend package."""
+__version__ = "0.1.0"
