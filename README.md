@@ -1,5 +1,7 @@
 # ai-auto-gauss-DFT
 
+**简体中文** | [English](README.en.md)
+
 AI 对话驱动的 Gaussian 量化计算全流程网页:**分子建模 → 生成 gjf → 提交任务(本地 / SSH)→ 结果作图(Multiwfn / VMD)**。可在网页内自由切换主流 AI 模型与自定义 API。
 
 ## 功能概览
@@ -119,3 +121,7 @@ cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
 - 批量/参数扫描、IRC 自动接续
 - 内嵌 2D 结构编辑器(Ketcher)
 - 二进制 CDX、NMR/UV-Vis 谱图绘制
+
+## 许可证
+
+MIT © 2026 8lampard8
