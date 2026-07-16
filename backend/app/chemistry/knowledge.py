@@ -55,9 +55,9 @@ FUNCTIONAL_CATALOG = [
 ]
 
 BASIS_CATALOG = [
-    "def2-SVP", "def2-TZVP", "def2-TZVPP", "def2-QZVPP",
+    "Def2SVP", "Def2TZVP", "Def2TZVPP", "Def2QZVPP",
     "6-31G(d)", "6-31G(d,p)", "6-311G(d,p)", "6-311+G(2d,p)",
-    "ma-def2-TZVP", "cc-pVTZ", "aug-cc-pVTZ",
+    "cc-pVTZ", "aug-cc-pVTZ", "SDD",
 ]
 
 TASK_CATALOG = [

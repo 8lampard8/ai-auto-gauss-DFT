@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
+from ..chemistry.basis_sets import COMMON_BASIS_SETS, validate_basis
 from ..chemistry.gjf_writer import generate_gjf
 from ..chemistry.method_recommender import recommend
 from ..molecules_store import load
@@ -38,4 +39,18 @@ def generate(req: GenerateGjfRequest) -> dict:
         gjf = generate_gjf(mol, req.spec)
     except ValueError as e:
         raise HTTPException(400, str(e))
-    return {"gjf": gjf, "spec": req.spec}
+    ok, msg = validate_basis(req.spec.basis)
+    return {"gjf": gjf, "spec": req.spec, "basis_valid": ok,
+            "basis_warning": "" if ok else msg}
+
+
+@router.get("/gjf/basis-sets")
+def list_basis_sets() -> dict:
+    """Common valid Gaussian basis sets (reference: gaussian.com/basissets)."""
+    return {"basis_sets": COMMON_BASIS_SETS}
+
+
+@router.get("/gjf/basis-sets/validate")
+def validate_basis_endpoint(basis: str) -> dict:
+    ok, message = validate_basis(basis)
+    return {"valid": ok, "message": message}

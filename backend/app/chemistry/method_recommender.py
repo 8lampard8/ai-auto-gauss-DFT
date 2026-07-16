@@ -22,11 +22,11 @@ def recommend(
 ) -> MethodSpec:
     # --- functional / basis by accuracy tier -------------------------------
     if accuracy == "fast":
-        functional, basis, label = "B3LYP", "def2-SVP", "B3LYP-D3(BJ)/def2-SVP"
+        functional, basis, label = "B3LYP", "Def2SVP", "B3LYP-D3(BJ)/Def2SVP"
     elif accuracy == "high":
-        functional, basis, label = "B2PLYP", "def2-TZVPP", "B2PLYP-D3(BJ)/def2-TZVPP"
+        functional, basis, label = "B2PLYP", "Def2TZVPP", "B2PLYP-D3(BJ)/Def2TZVPP"
     else:
-        functional, basis, label = "B3LYP", "def2-TZVP", "B3LYP-D3(BJ)/def2-TZVP"
+        functional, basis, label = "B3LYP", "Def2TZVP", "B3LYP-D3(BJ)/Def2TZVP"
 
     # --- route by task -----------------------------------------------------
     route = "opt freq"
@@ -50,9 +50,9 @@ def recommend(
         route = "nmr=giao"
     elif task == "tddft":
         if accuracy == "high":
-            functional, basis, label = "CAM-B3LYP", "def2-TZVP", "CAM-B3LYP/def2-TZVP"
+            functional, basis, label = "CAM-B3LYP", "Def2TZVP", "CAM-B3LYP/Def2TZVP"
         else:
-            functional, basis, label = "PBE0", "def2-TZVP", "PBE0/def2-TZVP"
+            functional, basis, label = "PBE0", "Def2TZVP", "PBE0/Def2TZVP"
         route = "td(nstates=20)"
 
     # --- dispersion --------------------------------------------------------

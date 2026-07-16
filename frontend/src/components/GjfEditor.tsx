@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../store'
 import { api } from '../api/client'
 import type { MethodSpec } from '../types'
@@ -29,6 +29,24 @@ export function GjfEditor() {
   const [accuracy, setAccuracy] = useState<'fast' | 'standard' | 'high'>('standard')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+  const [basisCheck, setBasisCheck] = useState<{ ok: boolean | null; msg: string }>({ ok: null, msg: '' })
+
+  // Validate the basis set against gaussian.com/basissets (debounced).
+  useEffect(() => {
+    const b = spec.basis.trim()
+    if (!b) { setBasisCheck({ ok: null, msg: '' }); return }
+    const t = setTimeout(async () => {
+      try {
+        const r = await api.get<{ valid: boolean; message: string }>(
+          `/gjf/basis-sets/validate?basis=${encodeURIComponent(b)}`,
+        )
+        setBasisCheck({ ok: r.valid, msg: r.message })
+      } catch {
+        setBasisCheck({ ok: null, msg: '' })
+      }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [spec.basis])
 
   const recommend = async () => {
     if (!molecule) return
@@ -67,7 +85,7 @@ export function GjfEditor() {
             <div className="row"><input type="number" value={spec.charge} onChange={(e) => setSpec({ ...spec, charge: parseInt(e.target.value) || 0 })} style={{ flex: 1 }} /><input type="number" value={spec.multiplicity} onChange={(e) => setSpec({ ...spec, multiplicity: parseInt(e.target.value) || 1 })} style={{ flex: 1 }} /></div>
           </label>
           <label className="field"><span className="lbl">泛函</span><input list="func-list" value={spec.functional} onChange={(e) => setSpec({ ...spec, functional: e.target.value })} /><datalist id="func-list">{(catalog?.functionals || []).map((f) => <option key={f} value={f} />)}</datalist></label>
-          <label className="field"><span className="lbl">基组</span><input list="basis-list" value={spec.basis} onChange={(e) => setSpec({ ...spec, basis: e.target.value })} /><datalist id="basis-list">{(catalog?.bases || []).map((b) => <option key={b} value={b} />)}</datalist></label>
+          <label className="field"><span className="lbl">基组 {basisCheck.ok === true && <span className="ok-text">✓</span>}{basisCheck.ok === false && <span className="err-text">⚠</span>}</span><input list="basis-list" value={spec.basis} onChange={(e) => setSpec({ ...spec, basis: e.target.value })} /><datalist id="basis-list">{(catalog?.bases || []).map((b) => <option key={b} value={b} />)}</datalist>{basisCheck.ok === false && <div className="err-text" style={{ fontSize: 11 }}>{basisCheck.msg}</div>}</label>
           <label className="field"><span className="lbl">%mem / %nproc</span><div className="row"><input value={spec.memory} onChange={(e) => setSpec({ ...spec, memory: e.target.value })} style={{ flex: 1 }} /><input type="number" value={spec.nproc} onChange={(e) => setSpec({ ...spec, nproc: parseInt(e.target.value) || 1 })} style={{ width: 70 }} /></div></label>
         </div>
         {spec.label && <div className="muted">{spec.label} · {spec.explanation}</div>}

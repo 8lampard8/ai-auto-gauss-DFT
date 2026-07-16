@@ -6,11 +6,16 @@ geometry) and a MethodSpec.
 from __future__ import annotations
 
 from ..schemas import MethodSpec, Molecule
+from .basis_sets import normalize_basis
 
 
 def generate_gjf(molecule: Molecule, spec: MethodSpec) -> str:
     if not molecule.atoms:
         raise ValueError("分子无坐标,无法生成 gjf")
+
+    # Normalise the basis keyword to Gaussian's canonical form (e.g.
+    # def2-TZVP -> Def2TZVP) so the route line is valid.
+    basis = normalize_basis(spec.basis)
 
     # --- Link 0 ------------------------------------------------------------
     link0 = [
@@ -23,7 +28,7 @@ def generate_gjf(molecule: Molecule, spec: MethodSpec) -> str:
     route_tokens: list[str] = []
     if spec.route:
         route_tokens.append(spec.route)
-    route_tokens.append(f"{spec.functional}/{spec.basis}")
+    route_tokens.append(f"{spec.functional}/{basis}")
     if spec.dispersion:
         route_tokens.append(spec.dispersion)
     if spec.extra:
