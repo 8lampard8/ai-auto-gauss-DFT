@@ -157,38 +157,49 @@ def _wslpath(path: str, to_win: bool) -> str:
 # entry point
 # ---------------------------------------------------------------------------
 def submit_local(job_id: str, molecule, spec, gaussian_path: str,
-                 nproc: int, mem: str) -> None:
+                 nproc: int, mem: str, gjf_text: str | None = None) -> None:
     work = JOBS_DIR / job_id
     work.mkdir(parents=True, exist_ok=True)
-    spec.nproc = nproc
-    spec.memory = _sanitize_mem(mem)
-
-    # G09W is 32-bit (IA32W) with a 4-core license: clamp %mem (<=~1.5GB, else
-    # the 32-bit process can't address it) and %nprocshared (<=4, else exit=9
-    # right after the link-0 cards with no error in the log).
     extra_note = ""
-    if _is_windows_gaussian(gaussian_path) and _is_g09w(gaussian_path):
-        capped_mem = _cap_mem(spec.memory, 1500)
-        if capped_mem != spec.memory:
-            extra_note += f"G09W 为 32 位,已将 %mem 由 {spec.memory} 限制为 {capped_mem};"
-            spec.memory = capped_mem
-        if spec.nproc and spec.nproc > 4:
-            extra_note += f"G09W 许可限 4 核,已将 %nprocshared 由 {spec.nproc} 降为 4;"
-            spec.nproc = 4
-        est = _estimate_basis_functions(len(molecule.atoms), spec.basis)
-        if est > 400:
-            extra_note += (f" 估算基函数约 {est},超出 32 位 G09W 常规能力(>~400),"
-                           "建议换 6-31G* 或更小基组,否则易 exit=9/内存超限。")
 
-    try:
-        gjf = generate_gjf(molecule, spec)
-    except ValueError as e:
-        update_job(job_id, status="failed", error=str(e))
-        return
+    if gjf_text:
+        # User-edited gjf: use it verbatim (no regeneration, no G09W caps).
+        gjf = gjf_text
+        m_np = re.search(r"%nprocshared\s*=\s*(\d+)", gjf, re.I)
+        m_mem = re.search(r"%mem\s*=\s*(\S+)", gjf, re.I)
+        rec_nproc = int(m_np.group(1)) if m_np else nproc
+        rec_mem = m_mem.group(1) if m_mem else mem
+    else:
+        spec.nproc = nproc
+        spec.memory = _sanitize_mem(mem)
+
+        # G09W is 32-bit (IA32W) with a 4-core license: clamp %mem (<=~1.5GB, else
+        # the 32-bit process can't address it) and %nprocshared (<=4, else exit=9
+        # right after the link-0 cards with no error in the log).
+        if _is_windows_gaussian(gaussian_path) and _is_g09w(gaussian_path):
+            capped_mem = _cap_mem(spec.memory, 1500)
+            if capped_mem != spec.memory:
+                extra_note += f"G09W 为 32 位,已将 %mem 由 {spec.memory} 限制为 {capped_mem};"
+                spec.memory = capped_mem
+            if spec.nproc and spec.nproc > 4:
+                extra_note += f"G09W 许可限 4 核,已将 %nprocshared 由 {spec.nproc} 降为 4;"
+                spec.nproc = 4
+            est = _estimate_basis_functions(len(molecule.atoms), spec.basis)
+            if est > 400:
+                extra_note += (f" 估算基函数约 {est},超出 32 位 G09W 常规能力(>~400),"
+                               "建议换 6-31G* 或更小基组,否则易 exit=9/内存超限。")
+        try:
+            gjf = generate_gjf(molecule, spec)
+        except ValueError as e:
+            update_job(job_id, status="failed", error=str(e))
+            return
+        rec_nproc = nproc
+        rec_mem = spec.memory
+
     gjf_path = work / "job.gjf"
     gjf_path.write_text(gjf, encoding="utf-8")
     update_job(job_id, gjf_path=str(gjf_path), work_dir=str(work),
-               nproc=nproc, mem=spec.memory)
+               nproc=rec_nproc, mem=rec_mem)
 
     if not gaussian_path:
         update_job(

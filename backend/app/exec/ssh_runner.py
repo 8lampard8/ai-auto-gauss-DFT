@@ -38,16 +38,20 @@ def _connect(profile):
     return client
 
 
-def submit_ssh(job_id: str, molecule, spec, profile, nproc: int, mem: str) -> None:
+def submit_ssh(job_id: str, molecule, spec, profile, nproc: int, mem: str,
+               gjf_text: str | None = None) -> None:
     work = JOBS_DIR / job_id
     work.mkdir(parents=True, exist_ok=True)
-    spec.nproc = nproc
-    spec.memory = mem
-    try:
-        gjf = generate_gjf(molecule, spec)
-    except ValueError as e:
-        update_job(job_id, status="failed", error=str(e))
-        return
+    if gjf_text:
+        gjf = gjf_text
+    else:
+        spec.nproc = nproc
+        spec.memory = mem
+        try:
+            gjf = generate_gjf(molecule, spec)
+        except ValueError as e:
+            update_job(job_id, status="failed", error=str(e))
+            return
     gjf_path = work / "job.gjf"
     gjf_path.write_text(gjf, encoding="utf-8")
     update_job(job_id, gjf_path=str(gjf_path), work_dir=str(work),

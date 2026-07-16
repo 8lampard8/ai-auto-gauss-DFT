@@ -78,21 +78,26 @@ def create_job_endpoint(req: CreateJobRequest) -> dict:
         mem = req.mem or "8GB"
 
     job_id = "job-" + uuid.uuid4().hex[:10]
+    spec_label = (req.spec.label or f"{req.spec.functional}/{req.spec.basis}")
+    if req.gjf:
+        spec_label = req.spec.label or "(自定义 gjf)"
     create_job(
         job_id,
         kind=req.kind,
         molecule_id=req.molecule_id,
         molecule_name=mol.name,
-        spec_label=req.spec.label or f"{req.spec.functional}/{req.spec.basis}",
+        spec_label=spec_label,
         nproc=nproc,
         mem=mem,
         ssh_profile_id=req.ssh_profile_id or "",
     )
 
     if req.kind == "local":
-        submit_local(job_id, mol, req.spec, gaussian_path, nproc, mem)
+        submit_local(job_id, mol, req.spec, gaussian_path, nproc, mem,
+                     gjf_text=req.gjf or None)
     else:
-        submit_ssh(job_id, mol, req.spec, profile, nproc, mem)
+        submit_ssh(job_id, mol, req.spec, profile, nproc, mem,
+                   gjf_text=req.gjf or None)
 
     return get_job(job_id) or {"id": job_id, "status": "queued"}
 

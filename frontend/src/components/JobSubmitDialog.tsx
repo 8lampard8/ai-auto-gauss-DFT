@@ -28,6 +28,7 @@ export function JobSubmitDialog() {
   const close = () => useStore.getState().setJobSubmitOpen(false)
   const molecule = useStore((s) => s.currentMolecule)
   const spec = useStore((s) => s.pendingSpec)
+  const gjf = useStore((s) => s.currentGjf)
   const refreshJobs = useStore((s) => s.refreshJobs)
   const setRightTab = useStore((s) => s.setRightTab)
 
@@ -97,6 +98,7 @@ export function JobSubmitDialog() {
         ssh_profile_id: kind === 'ssh' ? profileId : '',
         nproc,
         mem,
+        gjf: gjf || '',
       })
       await refreshJobs()
       setRightTab('jobs')
@@ -293,6 +295,13 @@ export function JobSubmitDialog() {
           )}
 
           {err && <div className="err-text">{err}</div>}
+          {gjf ? (
+            <div className="ok-text" style={{ background: 'var(--accent-soft)', padding: '8px 10px', borderRadius: 8 }}>
+              ✓ 将使用你在编辑器中修改后的 gjf 提交(%nprocshared / %mem 以 gjf 内容为准,不再用推荐设置重生成)。
+            </div>
+          ) : (
+            <div className="muted">未提供已编辑 gjf,将按推荐设置(spec)生成 gjf 提交。</div>
+          )}
           <div className="row">
             <button className="primary" onClick={submit} disabled={busy}>
               {busy ? '提交中…' : '一键提交'}

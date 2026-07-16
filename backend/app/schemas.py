@@ -166,3 +166,5 @@ class CreateJobRequest(BaseModel):
     ssh_profile_id: str = ""
     nproc: int | None = None
     mem: str | None = None       # e.g. "8GB"
+    gjf: str = ""                # optional pre-made (e.g. user-edited) gjf text;
+                                 # if set, used as-is instead of regenerating from spec
