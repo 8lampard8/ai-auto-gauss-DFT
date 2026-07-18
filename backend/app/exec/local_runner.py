@@ -153,6 +153,23 @@ def _wslpath(path: str, to_win: bool) -> str:
     return path
 
 
+def _cap_gjf_text(text: str, max_mem_mb: int = 1500, max_nproc: int = 4) -> str:
+    """Patch %mem / %nprocshared in a gjf text for G09W (32-bit, 4-core)."""
+    # %mem in GB
+    m = re.search(r"%mem\s*=\s*(\d+)\s*GB", text, re.I)
+    if m and int(m.group(1)) * 1024 > max_mem_mb:
+        text = re.sub(r"%mem\s*=\s*\d+\s*GB", f"%mem={max_mem_mb}MB", text, flags=re.I)
+    # %mem in MB
+    m = re.search(r"%mem\s*=\s*(\d+)\s*MB", text, re.I)
+    if m and int(m.group(1)) > max_mem_mb:
+        text = re.sub(r"%mem\s*=\s*\d+\s*MB", f"%mem={max_mem_mb}MB", text, flags=re.I)
+    # %nprocshared
+    m = re.search(r"%nprocshared\s*=\s*(\d+)", text, re.I)
+    if m and int(m.group(1)) > max_nproc:
+        text = re.sub(r"%nprocshared\s*=\s*\d+", f"%nprocshared={max_nproc}", text, flags=re.I)
+    return text
+
+
 # ---------------------------------------------------------------------------
 # entry point
 # ---------------------------------------------------------------------------
@@ -163,8 +180,15 @@ def submit_local(job_id: str, molecule, spec, gaussian_path: str,
     extra_note = ""
 
     if gjf_text:
-        # User-edited gjf: use it verbatim (no regeneration, no G09W caps).
+        # User-edited gjf: use it verbatim (no regeneration), but still apply
+        # G09W caps to %mem / %nprocshared (32-bit / 4-core limits) so the job
+        # doesn't crash at link 99.
         gjf = gjf_text
+        if _is_windows_gaussian(gaussian_path) and _is_g09w(gaussian_path):
+            capped = _cap_gjf_text(gjf)
+            if capped != gjf:
+                extra_note += "G09W 为 32 位,已将编辑后 gjf 的 %mem/%nprocshared 限制为 1500MB/4 核;"
+                gjf = capped
         m_np = re.search(r"%nprocshared\s*=\s*(\d+)", gjf, re.I)
         m_mem = re.search(r"%mem\s*=\s*(\S+)", gjf, re.I)
         rec_nproc = int(m_np.group(1)) if m_np else nproc
