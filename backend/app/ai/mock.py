@@ -14,7 +14,7 @@ _SAMPLE_GJF = """\
 %chk=job.chk
 %mem=10GB
 %nprocshared=6
-# opt freq b3lyp/def2-svp em=gd3bj scrf=(pcm,solvent=water)
+# opt freq b3lyp def2-svp em=gd3bj scrf=(pcm,solvent=water)
 
 title
 

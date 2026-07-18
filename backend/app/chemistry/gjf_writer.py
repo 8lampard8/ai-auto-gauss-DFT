@@ -28,7 +28,7 @@ def generate_gjf(molecule: Molecule, spec: MethodSpec) -> str:
     route_tokens: list[str] = []
     if spec.route:
         route_tokens.append(spec.route)
-    route_tokens.append(f"{spec.functional}/{basis}")
+    route_tokens.append(f"{spec.functional} {basis}")
     if spec.dispersion:
         route_tokens.append(spec.dispersion)
     if spec.extra:
