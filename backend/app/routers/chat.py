@@ -17,6 +17,7 @@ from ..ai.mock import MockProvider
 from ..ai.prompts import EXTRACT_PROMPT, SYSTEM_PROMPT
 from ..ai.provider import ChatMessage
 from ..ai.router import active_model, get_provider
+from ..ai.web_search import format_search_context, search_web
 from ..chemistry.importer import from_smiles
 from ..chemistry.name_resolver import heuristic_extract, resolve_smiles
 from ..molecules_store import save as save_molecule
@@ -80,6 +81,13 @@ async def chat(req: ChatRequest) -> StreamingResponse:
 
     mol, note = await _try_import(provider, model, last_user_text)
 
+    # Web search augmentation
+    search_results: list[dict] = []
+    search_query = ""
+    if req.web_search and last_user_text:
+        search_query = last_user_text[:120]
+        search_results = search_web(search_query)
+
     sys_text = SYSTEM_PROMPT
     if mol:
         sys_text += (
@@ -88,6 +96,8 @@ async def chat(req: ChatRequest) -> StreamingResponse:
         )
     elif note:
         sys_text += f"\n[系统]{note}"
+    if search_results:
+        sys_text += "\n\n" + format_search_context(search_query, search_results)
 
     msgs: list[ChatMessage] = [ChatMessage(role="system", content=sys_text)]
     for m in req.messages:
@@ -95,6 +105,17 @@ async def chat(req: ChatRequest) -> StreamingResponse:
             msgs.append(ChatMessage(role=m.role, content=m.content))
 
     async def gen():
+        if search_results:
+            yield _evt({
+                "type": "search",
+                "query": search_query,
+                "count": len(search_results),
+                "results": [{"title": r["title"], "url": r["url"]} for r in search_results],
+            })
+            yield _evt({
+                "type": "delta",
+                "content": f"🔍 已联网搜索「{search_query}」({len(search_results)} 条结果)\n\n",
+            })
         if mol:
             yield _evt({"type": "molecule", "molecule": mol.model_dump()})
             yield _evt({

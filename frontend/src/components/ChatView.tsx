@@ -61,6 +61,7 @@ export function ChatView() {
   const refreshMolecules = useStore((s) => s.refreshMolecules)
   const [input, setInput] = useState('')
   const [atBottom, setAtBottom] = useState(true)
+  const [webSearch, setWebSearch] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -91,6 +92,7 @@ export function ChatView() {
             ? settings.active_provider_id
             : undefined,
         model: settings?.active_model || undefined,
+        web_search: webSearch,
       })
       for await (const raw of stream) {
         const evt = JSON.parse(raw) as SseEvent
@@ -99,6 +101,8 @@ export function ChatView() {
           setCurrentMolecule(evt.molecule)
           refreshMolecules()
           useStore.getState().setActiveView('modeling')
+        } else if (evt.type === 'search' && evt.query) {
+          appendChat(`\n🔍 联网搜索「${evt.query}」- ${evt.count} 条结果\n`)
         } else if (evt.type === 'error') appendChat(`\n[错误] ${evt.message}`)
       }
     } catch (e) {
@@ -139,9 +143,15 @@ export function ChatView() {
           placeholder="描述计算需求或分子名称…(Enter 发送,Shift+Enter 换行)"
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
         />
-        <button className="primary" onClick={send} disabled={streaming}>
-          {streaming ? '生成中…' : '发送'}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-dim)', cursor: 'pointer', userSelect: 'none' }}>
+            <input type="checkbox" checked={webSearch} onChange={(e) => setWebSearch(e.target.checked)} style={{ width: 14, height: 14 }} />
+            🔍 联网搜索
+          </label>
+          <button className="primary" onClick={send} disabled={streaming}>
+            {streaming ? '生成中…' : '发送'}
+          </button>
+        </div>
       </div>
     </div>
   )

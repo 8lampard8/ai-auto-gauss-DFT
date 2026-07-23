@@ -48,10 +48,13 @@ export interface ChatMsg {
 }
 
 export interface SseEvent {
-  type: 'delta' | 'done' | 'error' | 'molecule'
+  type: 'delta' | 'done' | 'error' | 'molecule' | 'search'
   content?: string
   message?: string
   molecule?: Molecule
+  query?: string
+  count?: number
+  results?: { title: string; url: string }[]
 }
 
 export interface Atom {

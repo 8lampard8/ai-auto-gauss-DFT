@@ -46,6 +46,7 @@ class ChatRequest(BaseModel):
     provider_id: Optional[str] = None
     model: Optional[str] = None
     context: dict = Field(default_factory=dict)   # molecule_id, job_id, ...
+    web_search: bool = False                      # augment with web search results
 
 
 # ---------------------------------------------------------------------------
