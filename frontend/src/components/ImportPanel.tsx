@@ -15,9 +15,10 @@ export function ImportPanel() {
   const refreshMolecules = useStore((s) => s.refreshMolecules)
   const setDrawOpen = useStore((s) => s.setDrawOpen)
   const settings = useStore((s) => s.settings)
-  const [tab, setTab] = useState<'draw' | 'smiles' | 'name' | 'file'>('draw')
+  const [tab, setTab] = useState<'draw' | 'smiles' | 'cas' | 'name' | 'file'>('draw')
   const [smiles, setSmiles] = useState('')
   const [name, setName] = useState('')
+  const [cas, setCas] = useState('')
   const [visionModel, setVisionModel] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -33,6 +34,12 @@ export function ImportPanel() {
     if (!name.trim()) return
     setBusy(true); setErr('')
     try { await finish(await api.post<Molecule>('/molecules/import-by-name', { name: name.trim() })); setName('') }
+    catch (e) { setErr(e instanceof Error ? e.message : String(e)) } finally { setBusy(false) }
+  }
+  const byCas = async () => {
+    if (!cas.trim()) return
+    setBusy(true); setErr('')
+    try { await finish(await api.post<Molecule>('/molecules/import-by-cas', { cas: cas.trim() })); setCas('') }
     catch (e) { setErr(e instanceof Error ? e.message : String(e)) } finally { setBusy(false) }
   }
   const byFile = async (file: File) => {
@@ -52,7 +59,7 @@ export function ImportPanel() {
   }
 
   const TABS: { k: typeof tab; label: string }[] = [
-    { k: 'draw', label: '绘制分子' }, { k: 'smiles', label: 'SMILES' }, { k: 'name', label: '按名称' }, { k: 'file', label: '文件' },
+    { k: 'draw', label: '绘制分子' }, { k: 'smiles', label: 'SMILES' }, { k: 'cas', label: 'CAS 号' }, { k: 'name', label: '按名称' }, { k: 'file', label: '文件' },
   ]
 
   return (
@@ -74,6 +81,15 @@ export function ImportPanel() {
             <input value={smiles} onChange={(e) => setSmiles(e.target.value)} placeholder="如 CCO、c1ccccc1" onKeyDown={(e) => e.key === 'Enter' && bySmiles()} style={{ flex: 1 }} />
             <button className="primary" onClick={bySmiles} disabled={busy}>导入</button>
           </div>
+        )}
+        {tab === 'cas' && (
+          <>
+            <div className="row">
+              <input value={cas} onChange={(e) => setCas(e.target.value)} placeholder="如 64-17-5(乙醇)、7732-18-5(水)、50-78-2(阿司匹林)" onKeyDown={(e) => e.key === 'Enter' && byCas()} style={{ flex: 1 }} />
+              <button className="primary" onClick={byCas} disabled={busy}>导入</button>
+            </div>
+            <div className="muted" style={{ marginTop: 6 }}>输入 CAS 登录号,自动校验格式+校验位,经 PubChem 检索 SMILES 建模。</div>
+          </>
         )}
         {tab === 'name' && (
           <>

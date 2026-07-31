@@ -54,6 +54,25 @@ def _normalize(text: str) -> str:
     return text.strip().lower().replace(" ", "")
 
 
+def validate_cas(cas: str) -> tuple[bool, str]:
+    """Validate a CAS registry number (format + check digit).
+
+    CAS format: first-block(2-7 digits) - second-block(2 digits) - check(1 digit).
+    Check digit: reverse the digits before the check, multiply by 1,2,3...,
+    sum, then mod 10 must equal the check digit.
+    """
+    cas = cas.strip()
+    m = re.match(r"^(\d{2,7})-(\d{2})-(\d)$", cas)
+    if not m:
+        return False, "CAS 号格式应为 XXXX-XX-X(如 64-17-5 乙醇、7732-18-5 水)"
+    digits = m.group(1) + m.group(2)
+    check = int(m.group(3))
+    total = sum(int(d) * (i + 1) for i, d in enumerate(reversed(digits)))
+    if total % 10 != check:
+        return False, f"CAS 号「{cas}」校验位错误(应为 {total % 10})"
+    return True, ""
+
+
 def resolve_smiles(name: str) -> str:
     """Resolve a molecule name to a canonical SMILES via PubChem then CIR."""
     name = name.strip()

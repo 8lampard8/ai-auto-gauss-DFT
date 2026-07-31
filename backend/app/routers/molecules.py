@@ -4,9 +4,9 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 
 from ..chemistry.importer import import_molecule
-from ..chemistry.name_resolver import resolve_smiles
+from ..chemistry.name_resolver import resolve_smiles, validate_cas
 from ..molecules_store import delete as store_delete, list_all, load, save
-from ..schemas import ImportByNameRequest, ImportRequest, Molecule, UpdateStructureRequest
+from ..schemas import ImportByCasRequest, ImportByNameRequest, ImportRequest, Molecule, UpdateStructureRequest
 from ..settings_store import load as load_settings
 
 router = APIRouter(tags=["molecules"])
@@ -39,6 +39,23 @@ def import_by_name(req: ImportByNameRequest) -> Molecule:
         raise HTTPException(404, f"未能解析「{name}」的 SMILES(PubChem/CIR 均无结果)")
     try:
         mol = import_molecule("smiles", smiles, name=name)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return save(mol)
+
+
+@router.post("/molecules/import-by-cas", response_model=Molecule)
+def import_by_cas(req: ImportByCasRequest) -> Molecule:
+    """Resolve a CAS registry number (e.g. 64-17-5) to SMILES and import it."""
+    cas = req.cas.strip()
+    ok, msg = validate_cas(cas)
+    if not ok:
+        raise HTTPException(400, msg)
+    smiles = resolve_smiles(cas)  # PubChem resolves CAS numbers as names
+    if not smiles:
+        raise HTTPException(404, f"未能解析 CAS 号「{cas}」的 SMILES")
+    try:
+        mol = import_molecule("smiles", smiles, name=cas)
     except ValueError as e:
         raise HTTPException(400, str(e))
     return save(mol)

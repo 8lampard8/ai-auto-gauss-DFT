@@ -108,6 +108,10 @@ class ImportByNameRequest(BaseModel):
     name: str                      # molecule name (CN/EN) to resolve via PubChem/CIR
 
 
+class ImportByCasRequest(BaseModel):
+    cas: str                       # CAS registry number (e.g. 64-17-5) to resolve
+
+
 class UpdateStructureRequest(BaseModel):
     smiles: str                    # new SMILES; re-embeds 3D, keeps the same molecule id
 
