@@ -97,7 +97,7 @@ def _resolve_pubchem(name: str) -> str:
 
     url = (
         "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/"
-        f"{quote(name)}/property/CanonicalSMILES/JSON"
+        f"{quote(name)}/property/CanonicalSMILES,ConnectivitySMILES/JSON"
     )
     try:
         r = httpx.get(url, timeout=12.0)
@@ -106,7 +106,9 @@ def _resolve_pubchem(name: str) -> str:
         data = r.json()
         props = data.get("PropertyTable", {}).get("Properties", [])
         if props:
-            return props[0].get("CanonicalSMILES", "")
+            # Prefer CanonicalSMILES; fall back to ConnectivitySMILES (some
+            # compounds only have the connectivity form, e.g. CID 50940580).
+            return props[0].get("CanonicalSMILES") or props[0].get("ConnectivitySMILES", "")
     except Exception:
         return ""
     return ""
