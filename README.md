@@ -8,7 +8,7 @@ AI 对话驱动的 Gaussian 量化计算全流程网页:**分子建模 → 生�
 
 | 模块 | 能力 |
 |------|------|
-| **1 分子建模** | **对话直接建模**:在对话框说「帮我计算乙醇的优化」,AI 自动识别分子名→检索 SMILES(PubChem/CIR)→建模,3D 视图自动更新;另支持 SMILES / mol / mol2 / gjf / out·log / cdxml / 图片导入;3Dmol.js 3D 查看;自动推断电荷与多重度 |
+| **1 分子建模** | **对话直接建模**:在对话框说「帮我计算乙醇的优化」,AI 自动识别分子名→检索 SMILES(PubChem/CIR)→建模,3D 视图自动更新;另支持 SMILES / cas number / mol / mol2 / gjf / out·log / cdxml / 图片导入;3Dmol.js 3D 查看;自动推断电荷与多重度 |
 | **2 生成 gjf** | 对话式询问计算需求,自动推荐泛函/基组/多重度/SCRF 并生成 .gjf;规则推荐器 + AI 双轨,可编辑 |
 | **3 提交任务** | 本地(WSL2 自动经 interop 调 Windows G09W 或 Linux g16;自动探测 CPU/RAM 推荐 `%nproc`/`%mem`,G09W 自动限 4 核/1.5GB)+ SSH 远程一键提交(nohup + 轮询 + 回传 log/fchk);任务台账与**运行中实时日志**;失败自动提取可读原因(内存/基函数/语法/link0 崩溃等) |
 | **4 结果作图** | HOMO/LUMO、ESP 等值面、NCI/IRI/IGM/IGMH;沙箱限目录,驱动 Multiwfn + VMD(均可为 Windows 版,经 WSL interop)出图 |
