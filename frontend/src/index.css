@@ -211,6 +211,27 @@ textarea { font-family: inherit; resize: vertical; }
 .workspace { flex: 1; overflow: auto; padding: 18px; }
 .workspace > div > div { animation: fadeIn 0.25s ease; }
 
+.site-footer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 8px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-mute);
+  font-size: 11px;
+}
+.site-footer nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.site-footer nav span { color: var(--text-dim); font-weight: 600; }
+.site-footer a { color: var(--text-dim); text-decoration: none; transition: color var(--transition); }
+.site-footer a:hover { color: var(--accent-2); text-decoration: underline; }
+
+@media (max-width: 760px) {
+  .site-footer { align-items: flex-start; flex-direction: column; gap: 4px; }
+}
+
 /* ---------- Cards ---------- */
 .card {
   background: var(--surface);

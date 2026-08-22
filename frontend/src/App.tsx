@@ -34,6 +34,40 @@ export default function App() {
       <div className="main">
         <TopBar />
         <Workspace />
+        <footer className="site-footer">
+          <a href="mailto:heyihao2021@gmail.com">heyihao2021@gmail.com</a>
+          <nav aria-label="Friendly links">
+            <span>&#x53CB;&#x60C5;&#x94FE;&#x63A5;</span>
+            <a
+              href="https://chem.nwnu.edu.cn/2012/0420/c373a20221/page.htm"
+              target="_blank"
+              rel="noreferrer"
+            >
+              &#x6797;&#x5947;&#x6559;&#x6388;
+            </a>
+            <a
+              href="http://sobereva.com/multiwfn/download.html"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Multiwfn
+            </a>
+            <a
+              href="https://www.ks.uiuc.edu/Research/vmd/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              VMD
+            </a>
+            <a
+              href="https://github.com/8lampard8/ai-auto-gauss-DFT"
+              target="_blank"
+              rel="noreferrer"
+            >
+              GitHub
+            </a>
+          </nav>
+        </footer>
       </div>
       <JobSubmitDialog />
       {drawOpen && (
