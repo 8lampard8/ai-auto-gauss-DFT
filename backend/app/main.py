@@ -32,17 +32,16 @@ for r in (system, models, chat, molecules, gjf, jobs, visualize):
     app.include_router(r.router, prefix=API_PREFIX)
 
 
-@app.get("/")
-def root() -> dict:
-    """Fallback when no built frontend is present (dev mode)."""
-    return {
-        "app": "ai-auto-gauss-DFT",
-        "version": __version__,
-        "docs": "/docs",
-        "api": "/api/health",
-    }
-
-
 # Serve the built SPA in production. Registered last so /api/* wins.
 if FRONTEND_DIST.exists():
     app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="frontend")
+else:
+    @app.get("/")
+    def root() -> dict:
+        """Fallback when no built frontend is present (dev mode)."""
+        return {
+            "app": "ai-auto-gauss-DFT",
+            "version": __version__,
+            "docs": "/docs",
+            "api": "/api/health",
+        }
