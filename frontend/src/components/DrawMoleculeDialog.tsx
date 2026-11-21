@@ -4,9 +4,9 @@ import { StandaloneStructServiceProvider } from 'ketcher-standalone'
 import 'ketcher-react/dist/index.css'
 import { useStore } from '../store'
 import { api } from '../api/client'
+import { useT } from '../i18n'
 import type { Molecule } from '../types'
 
-/** Contain Ketcher errors so a draw-module failure never blanks the whole app. */
 class KetcherBoundary extends Component<{ children: ReactNode }, { err: string }> {
   state = { err: '' }
   static getDerivedStateFromError(e: any) { return { err: String(e) } }
@@ -15,9 +15,9 @@ class KetcherBoundary extends Component<{ children: ReactNode }, { err: string }
       return (
         <div className="placeholder" style={{ height: 520 }}>
           <div className="big">⚠️</div>
-          <div>绘制器加载失败</div>
+          <div>Ketcher load error / 绘制器加载失败</div>
           <div className="muted" style={{ maxWidth: 480 }}>{this.state.err}</div>
-          <button className="ghost sm" onClick={() => this.setState({ err: '' })}>重试</button>
+          <button className="ghost sm" onClick={() => this.setState({ err: '' })}>Retry / 重试</button>
         </div>
       )
     }
@@ -31,6 +31,7 @@ export function DrawMoleculeDialog() {
   const setCurrent = useStore((s) => s.setCurrentMolecule)
   const refreshMolecules = useStore((s) => s.refreshMolecules)
   const setActiveView = useStore((s) => s.setActiveView)
+  const { tr } = useT()
   const ketcherRef = useRef<any>(null)
   const [provider, setProvider] = useState<any>(null)
   const [initErr, setInitErr] = useState('')
@@ -38,7 +39,6 @@ export function DrawMoleculeDialog() {
   const [busy, setBusy] = useState(false)
   const [asMol, setAsMol] = useState(false)
 
-  // Lazily create the standalone (Indigo WASM) backend only when opened.
   useEffect(() => {
     if (open && !provider && !initErr) {
       try {
@@ -53,7 +53,7 @@ export function DrawMoleculeDialog() {
 
   const doImport = async () => {
     const k = ketcherRef.current
-    if (!k) { setErr('绘制器尚未初始化'); return }
+    if (!k) { setErr(tr('绘制器尚未初始化', 'Drawer not initialized yet')); return }
     setBusy(true); setErr('')
     try {
       let content: string
@@ -61,7 +61,7 @@ export function DrawMoleculeDialog() {
       if (asMol) { content = await k.getMolfile(); source = 'mol' }
       else { content = await k.getSmiles(); source = 'smiles' }
       content = (content || '').trim()
-      if (!content || content === 'C' || content === 'M  END') { setErr('请先在画板上绘制一个分子结构'); return }
+      if (!content || content === 'C' || content === 'M  END') { setErr(tr('请先在画板上绘制一个分子结构', 'Please draw a molecule on the canvas first')); return }
       const mol = await api.post<Molecule>('/molecules/import', { source, content, name: 'drawn' })
       setCurrent(mol)
       await refreshMolecules()
@@ -78,14 +78,14 @@ export function DrawMoleculeDialog() {
     <div className="overlay" onClick={close}>
       <div className="modal draw-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 1000 }}>
         <div className="modal-head">
-          绘制分子 (Ketcher)
+          {tr('绘制分子 (Ketcher)', 'Draw Molecule (Ketcher)')}
           <div className="spacer" />
           <button className="ghost" onClick={close}>✕</button>
         </div>
         <div className="modal-body">
           <div className="ketcher-wrap" style={{ height: 520 }}>
             {initErr ? (
-              <div className="placeholder"><div className="big">⚠️</div><div>绘制器后端初始化失败</div><div className="muted">{initErr}</div></div>
+              <div className="placeholder"><div className="big">⚠️</div><div>{tr('绘制器后端初始化失败', 'Failed to initialize drawer backend')}</div><div className="muted">{initErr}</div></div>
             ) : provider ? (
               <KetcherBoundary>
                 <Editor
@@ -96,18 +96,18 @@ export function DrawMoleculeDialog() {
                 />
               </KetcherBoundary>
             ) : (
-              <div className="placeholder"><div className="muted">加载绘制器…</div></div>
+              <div className="placeholder"><div className="muted">{tr('加载绘制器…', 'Loading drawer…')}</div></div>
             )}
           </div>
           <div className="row">
             <button className="primary" onClick={doImport} disabled={busy || !provider}>
-              {busy ? '导入中…' : '导入并建模'}
+              {busy ? tr('导入中…', 'Importing…') : tr('导入并建模', 'Import & Build 3D')}
             </button>
             <label className="row" style={{ gap: 4 }}>
               <input type="checkbox" checked={asMol} onChange={(e) => setAsMol(e.target.checked)} />
-              <span className="muted">用 MOL 格式(复杂结构/立体更准)</span>
+              <span className="muted">{tr('用 MOL 格式(复杂结构/立体更准)', 'Use MOL format (better for stereochemistry)')}</span>
             </label>
-            <span className="muted">默认导出 SMILES;画好后点「导入并建模」</span>
+            <span className="muted">{tr('默认导出 SMILES;画好后点「导入并建模」', 'Exports SMILES by default; click Import & Build 3D when done')}</span>
           </div>
           {err && <div className="err-text">{err}</div>}
         </div>

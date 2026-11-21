@@ -2,21 +2,29 @@
 from __future__ import annotations
 
 import datetime
+import re
 from collections import Counter
 from pathlib import Path
 
 from .config import UPLOADS_DIR
 from .schemas import Molecule, MoleculeSummary
 
+_SAFE_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
 
 def path(mid: str) -> Path:
+    if not _SAFE_ID.match(mid or ""):
+        raise FileNotFoundError(mid)
     return UPLOADS_DIR / f"{mid}.json"
 
 
 def save(mol: Molecule) -> Molecule:
     if not mol.created_at:
         mol.created_at = datetime.datetime.now().isoformat(timespec="seconds")
-    path(mol.id).write_text(mol.model_dump_json(indent=2), encoding="utf-8")
+    dst = path(mol.id)
+    tmp = dst.with_suffix(".json.tmp")
+    tmp.write_text(mol.model_dump_json(indent=2), encoding="utf-8")
+    tmp.replace(dst)
     return mol
 
 
@@ -28,7 +36,10 @@ def load(mid: str) -> Molecule:
 
 
 def delete(mid: str) -> bool:
-    p = path(mid)
+    try:
+        p = path(mid)
+    except FileNotFoundError:
+        return False
     if p.exists():
         p.unlink()
         return True

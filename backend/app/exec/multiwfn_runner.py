@@ -10,7 +10,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from .wsl import is_windows_path, on_wsl, exe_linux_path, to_windows_path
+from .wsl import is_windows_path, on_windows, on_wsl, exe_linux_path, to_windows_path
 
 
 def run(
@@ -20,13 +20,13 @@ def run(
     input_lines: list[str],
     timeout: int = 900,
 ) -> str:
-    windows = is_windows_path(multiwfn_path) and on_wsl()
+    windows_via_wsl = is_windows_path(multiwfn_path) and on_wsl()
     exe = (
         exe_linux_path(multiwfn_path, ["Multiwfn.exe", "Multiwfn"])
-        if windows else multiwfn_path
+        if (windows_via_wsl or on_windows()) else multiwfn_path
     )
     # First stdin line = the .fch path. Windows Multiwfn needs a Windows path.
-    fchk_arg = to_windows_path(str(fchk_path)) if windows else str(fchk_path)
+    fchk_arg = to_windows_path(str(fchk_path)) if windows_via_wsl else str(fchk_path)
     cmd_text = "\n".join([fchk_arg, *input_lines]) + "\n"
     try:
         proc = subprocess.run(

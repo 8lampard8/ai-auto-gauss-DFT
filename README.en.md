@@ -12,8 +12,9 @@ An AI-conversation-driven web app for the full Gaussian quantum-chemistry workfl
 | **2D/3D Editor** | Ketcher 2D canvas + 3Dmol 3D view, **bi-directionally synced**; one-click insertion of functional groups (-OH / -NH₂ / -COOH / -CHO / -CN / -NO₂ / -OMe / -Ac / -Ph / -SH / -SO₃H / -N₂⁺ / halides); live sync, in-place updates (no duplicate molecules); iteratively modify complex molecules. |
 | **2 Generate gjf** | Conversational querying of calculation needs; auto-recommends functional/basis-set/multiplicity/SCRF and generates a .gjf; rule-based recommender + AI dual track, editable. |
 | **3 Submit jobs** | Local (WSL2 auto-invokes Windows G09W or Linux g16 via interop; auto-detects CPU/RAM to recommend `%nproc`/`%mem`; G09W auto-capped to 4 cores / 1.5GB) + SSH remote one-click submit (nohup + polling + fetch log/fchk); job ledger with **live in-run log**; on failure, auto-extracts a readable reason (memory / basis-function count / syntax / link0 crash, etc.). |
-| **4 Result plotting** | HOMO/LUMO, ESP isosurfaces, NCI/IRI/IGM/IGMH; directory-sandboxed; drives Multiwfn + VMD (either can be the Windows build, via WSL interop) to render images. |
-| **5 Model freedom** | OpenAI / Anthropic / any OpenAI-compatible (DeepSeek, Doubao/Ark, local vLLM/Ollama) / custom / Mock; add/edit/switch providers in the UI. |
+| **4 Descriptors** | **Structure descriptors (RDKit)** (formula, MW, logP, TPSA, HBD/HBA, QED, Lipinski/Veber, topological indices, 3D shape Rg/PMI/NPR/PBF/vdW volume, plus all ~217 2D descriptors) + **Quantum descriptors (Gaussian .log/.out)** (SCF energy, HOMO/LUMO/gap, conceptual DFT indices I/A/χ/μ/η/S/ω, dipole, polarizability, ZPE/H/G, imaginary freqs, TD-DFT excited states, Mulliken/APT/Hirshfeld/CM5/NPA atomic charges); direct `.log` upload and **batch CSV/JSON export** for QSAR/ML. |
+| **5 Result plotting** | HOMO/LUMO, ESP isosurfaces, NCI/IRI/IGM/IGMH; directory-sandboxed; drives Multiwfn + VMD (native Windows/Linux or WSL interop) to render images. |
+| **6 Model freedom** | OpenAI / Anthropic / any OpenAI-compatible (DeepSeek, Doubao/Ark, local vLLM/Ollama) / custom / Mock; add/edit/switch providers in the UI. |
 
 ## Architecture
 
@@ -28,8 +29,8 @@ ai-auto-gauss-DFT/
 │       ├── molecules_store.py molecule JSON persistence
 │       ├── jobs_store.py    SQLite job ledger
 │       ├── security.py      path sandbox + key masking
-│       ├── routers/         system / models / chat / molecules / gjf / jobs / visualize
-│       ├── chemistry/       importer / name_resolver / gjf_writer / method_recommender / plot_recipes / knowledge
+│       ├── routers/         system / models / chat / molecules / descriptors / gjf / jobs / visualize
+│       ├── chemistry/       importer / name_resolver / descriptors / gaussian_parser / gjf_writer / method_recommender / plot_recipes / knowledge
 │       ├── ai/              provider abstraction / openai / anthropic / mock / router / prompts
 │       └── exec/            local_runner / ssh_runner / multiwfn_runner / vmd_runner
 ├── frontend/                React + Vite + TypeScript + 3Dmol.js + zustand + Ketcher
@@ -116,6 +117,8 @@ cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
 - [x] Phase 6 result plotting (Multiwfn + VMD, sandboxed)
 - [x] Phase 7 end-to-end run-through + docs
 - [x] 2D/3D synced editor (Ketcher) + functional groups
+- [x] Molecular descriptor extraction (RDKit 2D/3D + Gaussian DFT) + batch CSV/JSON export
+- [x] Bilingual UI switcher (`中文` / `EN`) in TopBar
 
 ## Future work
 

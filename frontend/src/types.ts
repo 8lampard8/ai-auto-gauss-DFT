@@ -121,6 +121,16 @@ export interface MethodSpec {
   explanation: string
 }
 
+export interface JobSummary {
+  energy?: number
+  homo_ev?: number
+  lumo_ev?: number
+  gap_ev?: number
+  dipole_debye?: number
+  gibbs?: number
+  n_imag?: number
+}
+
 export interface Job {
   id: string
   status: string
@@ -140,6 +150,7 @@ export interface Job {
   nproc: number
   mem: string
   ssh_profile_id: string
+  summary?: JobSummary
 }
 
 export interface SshProfile {
@@ -173,4 +184,77 @@ export interface VisualizeResult {
   image_url: string | null
   instructions: string
   vmd_out_dir: string
+}
+
+export interface DescriptorItem {
+  key: string
+  label: string
+  value: string | number | boolean | null
+  unit: string
+  hint?: string
+}
+
+export interface DescriptorGroup {
+  id: string
+  label: string
+  items: DescriptorItem[]
+}
+
+export interface AtomChargeRow {
+  index: number
+  element: string
+  mulliken?: number
+  mulliken_spin?: number
+  apt?: number
+  hirshfeld?: number
+  cm5?: number
+  npa?: number
+}
+
+export interface ExcitedStateRow {
+  state: number
+  symmetry: string
+  energy_ev: number
+  wavelength_nm: number
+  f: number
+  s2: number | null
+}
+
+export interface StructureDescriptors {
+  molecule_id: string
+  name: string
+  source: string
+  perception: string
+  groups: DescriptorGroup[]
+  warnings: string[]
+  flat: Record<string, string | number | boolean | null>
+  all?: Record<string, number | null>
+}
+
+export interface QuantumDescriptors {
+  groups: DescriptorGroup[]
+  atom_charges: AtomChargeRow[]
+  charge_schemes: string[]
+  excited_states: ExcitedStateRow[]
+  frequencies: number[]
+  warnings: string[]
+  flat: Record<string, string | number | boolean | null>
+}
+
+export interface DescriptorResponse {
+  kind: 'molecule' | 'job' | 'log'
+  id: string
+  name: string
+  spec_label?: string
+  structure: StructureDescriptors | null
+  quantum: QuantumDescriptors | null
+  warnings: string[]
+  flat: Record<string, string | number | boolean | null>
+}
+
+export interface BatchDescriptorResult {
+  columns: string[]
+  rows: Record<string, string | number | boolean | null>[]
+  count: number
+  errors: { source: string; error: string }[]
 }

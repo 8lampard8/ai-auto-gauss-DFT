@@ -8,6 +8,8 @@ frontend/dist/
 
 data/*.db
 data/*.db-journal
+data/*.db-wal
+data/*.db-shm
 data/settings.json
 data/uploads/*
 data/jobs/*
@@ -16,6 +18,7 @@ data/plots/*
 
 .DS_Store
 *.log
+!backend/tests/data/*.log
 *.tsbuildinfo
 frontend/vite.config.d.ts
 frontend/vite.config.js

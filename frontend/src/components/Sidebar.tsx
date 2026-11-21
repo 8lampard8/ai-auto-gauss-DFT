@@ -1,15 +1,17 @@
 import { useStore, activeModelLabel } from '../store'
 import { api } from '../api/client'
-import type { Settings, Molecule } from '../types'
+import { useT } from '../i18n'
+import type { Molecule } from '../types'
 import type { ViewName } from '../store'
 
-const NAV: { key: ViewName; label: string; ico: string }[] = [
-  { key: 'modeling', label: '建模', ico: '🧪' },
-  { key: 'editor', label: '编辑', ico: '✏️' },
-  { key: 'chat', label: '对话', ico: '💬' },
-  { key: 'jobs', label: '任务', ico: '🧮' },
-  { key: 'plot', label: '作图', ico: '📊' },
-  { key: 'settings', label: '设置', ico: '⚙️' },
+const NAV: { key: ViewName; zh: string; en: string; ico: string }[] = [
+  { key: 'modeling', zh: '建模', en: 'Modeling', ico: '🧪' },
+  { key: 'editor', zh: '编辑', en: 'Editor', ico: '✏️' },
+  { key: 'chat', zh: '对话', en: 'Chat', ico: '💬' },
+  { key: 'jobs', zh: '任务', en: 'Jobs', ico: '🧮' },
+  { key: 'descriptors', zh: '描述符', en: 'Descriptors', ico: '🧬' },
+  { key: 'plot', zh: '作图', en: 'Plot', ico: '📊' },
+  { key: 'settings', zh: '设置', en: 'Settings', ico: '⚙️' },
 ]
 
 export function Sidebar() {
@@ -22,6 +24,7 @@ export function Sidebar() {
   const settings = useStore((s) => s.settings)
   const sys = useStore((s) => s.systemInfo)
   const health = useStore((s) => s.health)
+  const { lang, tr } = useT()
 
   const load = async (id: string) => {
     const m = await api.get<Molecule>(`/molecules/${id}`)
@@ -48,15 +51,15 @@ export function Sidebar() {
             onClick={() => setActiveView(n.key)}
           >
             <span className="ico">{n.ico}</span>
-            {n.label}
+            {tr(n.zh, n.en)}
           </button>
         ))}
       </nav>
       <div className="mol-list">
-        <div className="title">已保存分子</div>
+        <div className="title">{tr('已保存分子', 'Saved Molecules')}</div>
         {moleculeList.length === 0 && (
           <div className="muted" style={{ padding: '6px 4px' }}>
-            (空)
+            {tr('(空)', '(empty)')}
           </div>
         )}
         {moleculeList.map((m) => (
@@ -64,7 +67,7 @@ export function Sidebar() {
             key={m.id}
             className={`mol-item ${currentMolecule?.id === m.id ? 'active' : ''}`}
             onClick={() => load(m.id)}
-            title={`${m.formula} · ${m.natoms} 原子 · ${m.source}`}
+            title={`${m.formula} · ${m.natoms} ${tr('原子', 'atoms')} · ${m.source}`}
           >
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {m.name || m.id}
@@ -78,12 +81,16 @@ export function Sidebar() {
       <div className="foot">
         <div className="chip">
           <span className={`health-dot ${health === 'ok' ? 'ok' : health === 'down' ? 'down' : ''}`} />
-          {health === 'ok' ? '后端已连接' : health === 'down' ? '未连接' : '…'}
+          {health === 'ok'
+            ? tr('后端已连接', 'Backend connected')
+            : health === 'down'
+              ? tr('未连接', 'Disconnected')
+              : '…'}
         </div>
         <div className="muted" style={{ marginTop: 4 }}>
           {sys ? `CPU ${sys.cpu_count}c · RAM ${sys.ram_total_gb}GB` : ''}
         </div>
-        <div className="muted">{activeModelLabel(settings)}</div>
+        <div className="muted">{activeModelLabel(settings, lang)}</div>
       </div>
     </aside>
   )

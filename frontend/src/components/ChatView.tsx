@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { streamPost } from '../api/client'
+import { useT } from '../i18n'
 import type { ChatMsg, SseEvent } from '../types'
 
 function download(name: string, text: string) {
@@ -28,6 +29,9 @@ function parseContent(content: string) {
 }
 
 function MessageContent({ content }: { content: string }) {
+  const setCurrentGjf = useStore((s) => s.setCurrentGjf)
+  const setActiveView = useStore((s) => s.setActiveView)
+  const { tr } = useT()
   return (
     <>
       {parseContent(content).map((p, i) => {
@@ -38,8 +42,21 @@ function MessageContent({ content }: { content: string }) {
             <div className="code-head">
               <span className="muted" style={{ color: '#94a3b8' }}>{p.lang || 'code'}</span>
               <div className="spacer" />
-              <button className="ghost sm" style={{ color: '#e2e8f0' }} onClick={() => navigator.clipboard?.writeText(p.text)}>复制</button>
-              {isGjf && <button className="sm" onClick={() => download('job.gjf', p.text)}>下载 .gjf</button>}
+              <button className="ghost sm" style={{ color: '#e2e8f0' }} onClick={() => navigator.clipboard?.writeText(p.text)}>{tr('复制', 'Copy')}</button>
+              {isGjf && (
+                <>
+                  <button
+                    className="sm primary"
+                    onClick={() => {
+                      setCurrentGjf(p.text)
+                      setActiveView('modeling')
+                    }}
+                  >
+                    {tr('载入到编辑器', 'Load in Editor')}
+                  </button>
+                  <button className="sm" onClick={() => download('job.gjf', p.text)}>{tr('下载 .gjf', 'Download .gjf')}</button>
+                </>
+              )}
             </div>
             <code>{p.text}</code>
           </pre>
@@ -57,8 +74,12 @@ export function ChatView() {
   const streaming = useStore((s) => s.chatStreaming)
   const settings = useStore((s) => s.settings)
   const clearChat = useStore((s) => s.clearChat)
+  const currentMolecule = useStore((s) => s.currentMolecule)
   const setCurrentMolecule = useStore((s) => s.setCurrentMolecule)
   const refreshMolecules = useStore((s) => s.refreshMolecules)
+  const setActiveView = useStore((s) => s.setActiveView)
+  const openDescriptors = useStore((s) => s.openDescriptors)
+  const { lang, tr } = useT()
   const [input, setInput] = useState('')
   const [atBottom, setAtBottom] = useState(true)
   const [webSearch, setWebSearch] = useState(false)
@@ -92,6 +113,10 @@ export function ChatView() {
             ? settings.active_provider_id
             : undefined,
         model: settings?.active_model || undefined,
+        context: {
+          ...(currentMolecule ? { molecule_id: currentMolecule.id } : {}),
+          lang,
+        },
         web_search: webSearch,
       })
       for await (const raw of stream) {
@@ -100,13 +125,17 @@ export function ChatView() {
         else if (evt.type === 'molecule' && evt.molecule) {
           setCurrentMolecule(evt.molecule)
           refreshMolecules()
-          useStore.getState().setActiveView('modeling')
         } else if (evt.type === 'search' && evt.query) {
-          appendChat(`\n🔍 联网搜索「${evt.query}」- ${evt.count} 条结果\n`)
-        } else if (evt.type === 'error') appendChat(`\n[错误] ${evt.message}`)
+          appendChat(
+            tr(
+              `🔍 已联网搜索「${evt.query}」(${evt.count} 条结果)\n\n`,
+              `🔍 Web search "${evt.query}" (${evt.count} results)\n\n`,
+            ),
+          )
+        } else if (evt.type === 'error') appendChat(`\n[${tr('错误', 'Error')}] ${evt.message}`)
       }
     } catch (e) {
-      appendChat(`\n[请求失败] ${String(e)}`)
+      appendChat(`\n[${tr('请求失败', 'Request failed')}] ${String(e)}`)
     } finally {
       setChatStreaming(false)
     }
@@ -115,9 +144,18 @@ export function ChatView() {
   return (
     <div className="card" style={{ height: '100%' }}>
       <div className="card-head">
-        <span>AI 对话</span>
+        <span>{tr('AI 对话', 'AI Chat')}</span>
+        {currentMolecule && (
+          <>
+            <span className="badge">{tr('当前分子', 'Active')}: {currentMolecule.name}</span>
+            <button className="ghost sm" onClick={() => setActiveView('modeling')}>{tr('查看 3D', 'View 3D')}</button>
+            <button className="ghost sm" onClick={() => openDescriptors({ kind: 'molecule', id: currentMolecule.id })}>
+              🧬 {tr('描述符', 'Descriptors')}
+            </button>
+          </>
+        )}
         <div className="spacer" />
-        <button className="ghost sm" onClick={clearChat}>清空</button>
+        <button className="ghost sm" onClick={clearChat}>{tr('清空', 'Clear')}</button>
       </div>
       <div className="card-body chat-body" ref={bodyRef} onScroll={onScroll}>
         <div className="chat-stream">
@@ -132,7 +170,7 @@ export function ChatView() {
         </div>
         {!atBottom && (
           <button className="scroll-latest" onClick={() => { bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' }); setAtBottom(true) }}>
-            ↓ 最新
+            {tr('↓ 最新', '↓ Latest')}
           </button>
         )}
       </div>
@@ -140,16 +178,19 @@ export function ChatView() {
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="描述计算需求或分子名称…(Enter 发送,Shift+Enter 换行)"
+          placeholder={tr(
+            '描述计算需求或分子名称…(Enter 发送,Shift+Enter 换行)',
+            'Describe calculation needs or molecule name… (Enter to send, Shift+Enter for newline)',
+          )}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
         />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--text-dim)', cursor: 'pointer', userSelect: 'none' }}>
             <input type="checkbox" checked={webSearch} onChange={(e) => setWebSearch(e.target.checked)} style={{ width: 14, height: 14 }} />
-            🔍 联网搜索
+            🔍 {tr('联网搜索', 'Web search')}
           </label>
           <button className="primary" onClick={send} disabled={streaming}>
-            {streaming ? '生成中…' : '发送'}
+            {streaming ? tr('生成中…', 'Generating…') : tr('发送', 'Send')}
           </button>
         </div>
       </div>

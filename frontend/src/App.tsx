@@ -1,6 +1,7 @@
 import { useEffect, lazy, Suspense } from 'react'
 import { api } from './api/client'
 import { useStore } from './store'
+import { useT } from './i18n'
 import type { SystemInfo } from './types'
 import { Sidebar } from './components/Sidebar'
 import { TopBar } from './components/TopBar'
@@ -21,6 +22,7 @@ export default function App() {
   const refreshMolecules = useStore((s) => s.refreshMolecules)
   const refreshJobs = useStore((s) => s.refreshJobs)
   const drawOpen = useStore((s) => s.drawOpen)
+  const { tr } = useT()
 
   useEffect(() => {
     api.get('/health').then(() => setHealth('ok')).catch(() => setHealth('down'))
@@ -37,13 +39,13 @@ export default function App() {
         <footer className="site-footer">
           <a href="mailto:heyihao2021@gmail.com">heyihao2021@gmail.com</a>
           <nav aria-label="Friendly links">
-            <span>&#x53CB;&#x60C5;&#x94FE;&#x63A5;</span>
+            <span>{tr('友情链接', 'Links')}</span>
             <a
               href="https://chem.nwnu.edu.cn/2012/0420/c373a20221/page.htm"
               target="_blank"
               rel="noreferrer"
             >
-              &#x6797;&#x5947;&#x6559;&#x6388;
+              {tr('林奇教授', 'Prof. Qi Lin')}
             </a>
             <a
               href="http://sobereva.com/multiwfn/download.html"
@@ -71,7 +73,7 @@ export default function App() {
       </div>
       <JobSubmitDialog />
       {drawOpen && (
-        <Suspense fallback={<div className="overlay"><div className="modal draw-modal"><div className="modal-body"><div className="muted">加载绘制器…</div></div></div></div>}>
+        <Suspense fallback={<div className="overlay"><div className="modal draw-modal"><div className="modal-body"><div className="muted">{tr('加载绘制器…', 'Loading drawer…')}</div></div></div></div>}>
           <DrawMoleculeDialog />
         </Suspense>
       )}

@@ -6,6 +6,7 @@ user-supplied path.
 """
 from __future__ import annotations
 
+import re
 import shutil
 import uuid
 from pathlib import Path
@@ -25,14 +26,28 @@ from ..settings_store import load as load_settings
 
 router = APIRouter(tags=["visualize"])
 
-# Atomic numbers for computing N_occ (HOMO/LUMO orbital indices).
-_ATOMIC_NUM = {
-    "H": 1, "He": 2, "Li": 3, "Be": 4, "B": 5, "C": 6, "N": 7, "O": 8, "F": 9,
-    "Ne": 10, "Na": 11, "Mg": 12, "Al": 13, "Si": 14, "P": 15, "S": 16, "Cl": 17,
-    "Ar": 18, "K": 19, "Ca": 20, "Sc": 21, "Ti": 22, "V": 23, "Cr": 24, "Mn": 25,
-    "Fe": 26, "Co": 27, "Ni": 28, "Cu": 29, "Zn": 30, "Ga": 31, "Ge": 32, "As": 33,
-    "Se": 34, "Br": 35, "Kr": 36, "Rb": 37, "Sr": 38, "I": 53, "Xe": 54,
-}
+
+def _fchk_counts(fchk_path: Path) -> tuple[int | None, int | None]:
+    """Read (n_atoms, n_alpha_electrons) directly from a Gaussian .fchk header."""
+    try:
+        head = fchk_path.read_text(encoding="utf-8", errors="ignore")[:8192]
+    except Exception:
+        return None, None
+    m_at = re.search(r"Number of atoms\s+I\s+(\d+)", head)
+    m_al = re.search(r"Number of alpha electrons\s+I\s+(\d+)", head)
+    return (int(m_at.group(1)) if m_at else None,
+            int(m_al.group(1)) if m_al else None)
+
+
+def _atomic_num(element: str) -> int:
+    try:
+        from rdkit import Chem
+        z = Chem.GetPeriodicTable().GetAtomicNumber(element)
+        if z > 0:
+            return z
+    except Exception:
+        pass
+    return 6
 
 
 class VisualizeRequest(BaseModel):
@@ -92,20 +107,26 @@ def run(req: VisualizeRequest) -> dict:
 
     input_lines = list(req.multiwfn_input or recipe["multiwfn_input"])
     # Substitute placeholders: {atoms} (IGMH), {homo}/{lumo} (orbital indices).
-    try:
-        mol = load_molecule(job.get("molecule_id", ""))
-        n = len(mol.atoms)
-        n_elec = sum(_ATOMIC_NUM.get(a.element, 6) for a in mol.atoms) - mol.charge
-        n_occ = max(1, n_elec // 2)  # closed-shell approximation
+    # Prefer exact counts from the .fchk header; fall back to the saved molecule.
+    n_atoms, n_occ = _fchk_counts(Path(fchk_src))
+    if n_atoms is None or n_occ is None:
+        try:
+            mol = load_molecule(job.get("molecule_id", ""))
+            if n_atoms is None:
+                n_atoms = len(mol.atoms)
+            if n_occ is None:
+                n_elec = sum(_atomic_num(a.element) for a in mol.atoms) - mol.charge
+                n_occ = max(1, (n_elec + mol.multiplicity - 1) // 2)
+        except Exception:
+            pass
+    if n_atoms and n_occ:
         subs = {
-            "{atoms}": f"1-{n}",
+            "{atoms}": f"1-{n_atoms}",
             "{homo}": str(n_occ),
             "{lumo}": str(n_occ + 1),
         }
         for k, v in subs.items():
             input_lines = [l.replace(k, v) for l in input_lines]
-    except Exception:
-        pass
     vmd_script = req.vmd_script or recipe["vmd_script"]
     run_id = uuid.uuid4().hex[:10]
 
@@ -150,10 +171,10 @@ def run(req: VisualizeRequest) -> dict:
 @router.get("/visualize/image/{run_id}/{name}")
 def get_image(run_id: str, name: str) -> FileResponse:
     s = load_settings()
-    vmd = s.get("vmd_path", "")
-    if not vmd:
-        raise HTTPException(400, "未配置 VMD 路径")
-    vmd_dir = tool_dir(vmd)
+    base_tool = s.get("vmd_path") or s.get("multiwfn_path", "")
+    if not base_tool:
+        raise HTTPException(400, "未配置 VMD / Multiwfn 路径")
+    vmd_dir = tool_dir(base_tool)
     img = (vmd_dir / "aagd_plots" / run_id / name).resolve()
     # strict sandbox: only allow png/jpg/tga inside aagd_plots
     if not name.lower().endswith((".png", ".jpg", ".jpeg", ".tga")):

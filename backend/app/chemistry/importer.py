@@ -30,7 +30,7 @@ from ..schemas import Atom, Bond, Molecule
 def _sym_from_atomic_num(n: int) -> str:
     from rdkit import Chem
 
-    return Chem.GetSymbol(int(n))
+    return Chem.GetPeriodicTable().GetElementSymbol(int(n))
 
 
 def _infer_multiplicity(mol) -> int:
@@ -193,9 +193,15 @@ def from_smiles(smi: str, name: str = "") -> Molecule:
         if AllChem.EmbedMolecule(mol, randomSeed=0xF00D, useRandomCoords=True) != 0:
             Chem.Compute2DCoords(mol)  # last resort: flat layout
     try:
-        AllChem.MMFFOptimizeMolecule(mol, maxIters=300)
+        if AllChem.MMFFHasAllMoleculeParams(mol):
+            AllChem.MMFFOptimizeMolecule(mol, maxIters=300)
+        else:
+            AllChem.UFFOptimizeMolecule(mol, maxIters=300)
     except Exception:
-        pass
+        try:
+            AllChem.UFFOptimizeMolecule(mol, maxIters=300)
+        except Exception:
+            pass
     return _mol_to_molecule(mol, "smiles", name=name or smi, smiles=smi)
 
 
@@ -299,9 +305,12 @@ def from_gjf(text: str, name: str = "") -> Molecule:
 # Gaussian out / log
 # ---------------------------------------------------------------------------
 def from_gaussian_log(text: str, name: str = "") -> Molecule:
-    occ = [m.start() for m in re.finditer(r"Standard orientation:")]
+    occ = [m.start() for m in re.finditer(r"Standard orientation:", text)]
     if not occ:
-        raise ValueError("未找到 Standard orientation(可能计算未完成或为输入文件)")
+        # NoSymm / some single-point logs only print Input orientation.
+        occ = [m.start() for m in re.finditer(r"Input orientation:", text)]
+    if not occ:
+        raise ValueError("未找到 Standard/Input orientation(可能计算未完成或为输入文件)")
     sub = text[occ[-1]:]
     atoms: list[Atom] = []
     for line in sub.splitlines()[1:]:
@@ -318,17 +327,19 @@ def from_gaussian_log(text: str, name: str = "") -> Molecule:
         if len(toks) >= 6:
             try:
                 an = int(toks[1])
+                if an <= 0:
+                    continue
                 x, y, z = float(toks[3]), float(toks[4]), float(toks[5])
             except ValueError:
                 continue  # header line
             atoms.append(Atom(element=_sym_from_atomic_num(an), x=x, y=y, z=z))
     if not atoms:
-        raise ValueError("未解析到 Standard orientation 坐标")
+        raise ValueError("未解析到 Standard/Input orientation 坐标")
     cm = re.search(r"Charge\s*=\s*(-?\d+)\s*Multiplicity\s*=\s*(\d+)", text)
     charge, mult = (int(cm.group(1)), int(cm.group(2))) if cm else (0, 1)
     # route
-    rm = re.search(r"#\s*N?\s*\n?(.*?)\n\s*---", text, re.S)
-    route = rm.group(1).strip() if rm else ""
+    rm = re.search(r"^\s*(#[^\n]*(?:\n[^\n-]+)*)\n\s*-{5,}", text, re.M)
+    route = "".join(ln.strip() for ln in rm.group(1).splitlines()) if rm else ""
     xyz = _atoms_to_xyz(atoms, charge, mult)
     return Molecule(
         id=_new_id(),
@@ -464,17 +475,26 @@ def from_image(b64: str, mime: str, name: str, settings: dict,
                provider_id: str | None = None, model: str | None = None) -> Molecule:
     osra = shutil.which("osra")
     if osra:
-        with tempfile.NamedTemporaryFile(suffix=".png") as f:
-            f.write(base64.b64decode(b64))
-            f.flush()
-            try:
-                res = subprocess.run([osra, f.name], capture_output=True,
-                                     text=True, timeout=40)
-            except Exception as e:
-                raise ValueError(f"OSRA 执行失败:{e}")
+        import os
+
+        tmp_path = ""
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+                f.write(base64.b64decode(b64))
+                tmp_path = f.name
+            res = subprocess.run([osra, tmp_path], capture_output=True,
+                                 text=True, timeout=40)
             smi = (res.stdout or "").strip().split()
             if smi:
                 return from_smiles(smi[0], name or "image")
+        except Exception as e:
+            raise ValueError(f"OSRA 执行失败:{e}")
+        finally:
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
         raise ValueError("OSRA 未能从图片识别结构")
     # fallback: an OpenAI-compatible vision provider (explicit or active)
     pid = provider_id or settings.get("active_provider_id")

@@ -11,8 +11,9 @@ AI 对话驱动的 Gaussian 量化计算全流程网页:**分子建模 → 生�
 | **1 分子建模** | **对话直接建模**:在对话框说「帮我计算乙醇的优化」,AI 自动识别分子名→检索 SMILES(PubChem/CIR)→建模,3D 视图自动更新;另支持 SMILES / cas number / mol / mol2 / gjf / out·log / cdxml / 图片导入;3Dmol.js 3D 查看;自动推断电荷与多重度 |
 | **2 生成 gjf** | 对话式询问计算需求,自动推荐泛函/基组/多重度/SCRF 并生成 .gjf;规则推荐器 + AI 双轨,可编辑 |
 | **3 提交任务** | 本地(WSL2 自动经 interop 调 Windows G09W 或 Linux g16;自动探测 CPU/RAM 推荐 `%nproc`/`%mem`,G09W 自动限 4 核/1.5GB)+ SSH 远程一键提交(nohup + 轮询 + 回传 log/fchk);任务台账与**运行中实时日志**;失败自动提取可读原因(内存/基函数/语法/link0 崩溃等) |
-| **4 结果作图** | HOMO/LUMO、ESP 等值面、NCI/IRI/IGM/IGMH;沙箱限目录,驱动 Multiwfn + VMD(均可为 Windows 版,经 WSL interop)出图 |
-| **5 模型自由** | OpenAI / Anthropic / 任意 OpenAI 兼容(DeepSeek、豆包/Ark、本地 vLLM/Ollama)/ 自定义 / Mock;网页内增删改与切换 |
+| **4 分子描述符** | **结构描述符 (RDKit)**(分子式/MW/logP/TPSA/HBD/HBA/QED/Lipinski/拓扑指数/3D 形状 Rg·PMI·NPR·PBF·vdW 体积 + 全部 ~217 项 2D 描述符)+ **量化描述符 (Gaussian .log/.out)**(SCF 能量、HOMO/LUMO/能隙、概念 DFT 指数 I/A/χ/μ/η/S/ω、偶极矩、极化率、ZPE/H/G、虚频、TD-DFT 激发态、Mulliken/APT/Hirshfeld/CM5/NPA 原子电荷);支持直接上传 .log 解析与多分子/任务/SMILES **批量提取导出 CSV/JSON** |
+| **5 结果作图** | HOMO/LUMO、ESP 等值面、NCI/IRI/IGM/IGMH;沙箱限目录,驱动 Multiwfn + VMD(支持原生 Windows/Linux 及 WSL interop)出图 |
+| **6 模型自由** | OpenAI / Anthropic / 任意 OpenAI 兼容(DeepSeek、豆包/Ark、本地 vLLM/Ollama)/ 自定义 / Mock;网页内增删改与切换 |
 
 ## 架构
 
@@ -27,8 +28,8 @@ ai-auto-gauss-DFT/
 │       ├── molecules_store.py 分子 JSON 持久化
 │       ├── jobs_store.py    SQLite 任务台账
 │       ├── security.py      路径沙箱 + 密钥掩码
-│       ├── routers/         system / models / chat / molecules / gjf / jobs / visualize
-│       ├── chemistry/       importer / name_resolver / gjf_writer / method_recommender / plot_recipes / knowledge
+│       ├── routers/         system / models / chat / molecules / descriptors / gjf / jobs / visualize
+│       ├── chemistry/       importer / name_resolver / descriptors / gaussian_parser / gjf_writer / method_recommender / plot_recipes / knowledge
 │       ├── ai/              provider 抽象 / openai / anthropic / mock / router / prompts
 │       └── exec/            local_runner / ssh_runner / multiwfn_runner / vmd_runner
 ├── frontend/                React + Vite + TypeScript + 3Dmol.js + zustand
@@ -113,7 +114,7 @@ cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ## 界面
 
-明亮简洁卡片式(浅色背景、圆角卡片、蓝色主调、左侧导航 + 顶栏 + 卡片工作区)。导航:建模 / 编辑 / 对话 / 任务 / 作图 / 设置。对话栏有常驻可拖动滚动条 +「↓ 最新」按钮。任何渲染崩溃由顶层 ErrorBoundary 捕获并显示错误(不再白屏)。
+明亮简洁卡片式(浅色背景、圆角卡片、蓝色主调、左侧导航 + 顶栏 + 卡片工作区)。导航:建模 / 编辑 / 对话 / 任务 / 描述符 / 作图 / 设置,顶栏支持一键**中文 / EN** 界面切换(AI 对话同步跟随语言)。对话栏有常驻可拖动滚动条 +「↓ 最新」按钮。任何渲染崩溃由顶层 ErrorBoundary 捕获并显示错误(不再白屏)。
 
 ## 后续可扩展
 

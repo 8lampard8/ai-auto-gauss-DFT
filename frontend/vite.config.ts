@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
@@ -42,50 +42,53 @@ function fixKetcherRaphael(): Plugin {
   }
 }
 
-export default defineConfig({
-  plugins: [
-    fixKetcherRaphael(),
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, '.', '')
+  return {
+    plugins: [
+      fixKetcherRaphael(),
 
-    react(),
+      react(),
 
-    nodePolyfills({
-      globals: {
-        process: true,
-        Buffer: true,
-        global: true,
-      },
-      include: [
-        'util',
-        'assert',
-        'buffer',
-        'process',
-        'stream',
-        'events',
-        'path',
-        'crypto',
-      ],
-    }),
-  ],
+      nodePolyfills({
+        globals: {
+          process: true,
+          Buffer: true,
+          global: true,
+        },
+        include: [
+          'util',
+          'assert',
+          'buffer',
+          'process',
+          'stream',
+          'events',
+          'path',
+          'crypto',
+        ],
+      }),
+    ],
 
-  define: {
-    'process.env': {},
-    global: 'window',
-  },
-
-  build: {
-    commonjsOptions: {
-      transformMixedEsModules: true,
+    define: {
+      'process.env': {},
+      global: 'window',
     },
-  },
 
-  server: {
-    host: '0.0.0.0',
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
+    build: {
+      commonjsOptions: {
+        transformMixedEsModules: true,
       },
     },
-  },
+
+    server: {
+      host: '0.0.0.0',
+      port: 5173,
+      proxy: {
+        '/api': {
+          target: env.VITE_API_TARGET || 'http://127.0.0.1:8000',
+          changeOrigin: true,
+        },
+      },
+    },
+  }
 })

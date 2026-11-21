@@ -32,6 +32,36 @@ export const api = {
   del: <T>(p: string) => req<T>('DELETE', p),
 }
 
+/** POST to an export endpoint and download the returned file blob. */
+export async function downloadPost(path: string, body: unknown, fallbackName: string): Promise<void> {
+  const r = await fetch(BASE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!r.ok) {
+    let detail = ''
+    try {
+      const j = await r.json()
+      detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j)
+    } catch {
+      try {
+        detail = await r.text()
+      } catch {
+        /* ignore */
+      }
+    }
+    throw new Error(detail || `POST ${path} -> ${r.status} ${r.statusText}`)
+  }
+  const blob = await r.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fallbackName
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 /** SSE stream reader for the chat endpoint. Yields decoded `data:` payloads. */
 export async function* streamPost(path: string, body: unknown): AsyncGenerator<string> {
   const r = await fetch(BASE + path, {

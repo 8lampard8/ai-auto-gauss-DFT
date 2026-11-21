@@ -1,0 +1,131 @@
+ Entering Gaussian System, Link 0=g16
+ Input=job.gjf
+ Output=job.log
+ ******************************************
+ Gaussian 16:  ES64L-G16RevC.01  3-Jul-2019
+                21-Nov-2026
+ ******************************************
+ %chk=job.chk
+ %mem=8GB
+ %nprocshared=4
+ Will use up to    4 processors via shared memory.
+ ----------------------------------------------------------------------
+ #p opt freq B3LYP/6-31G(d) em=gd3bj pop=(hirshfeld,nbo) scrf=(pcm,solv
+ ent=water)
+ ----------------------------------------------------------------------
+ 1/18=20,19=15,38=1/1,3;
+ -----
+ water
+ -----
+ Symbolic Z-matrix:
+ Charge =  0 Multiplicity = 1
+ O                     0.        0.        0.11
+ H                     0.        0.76     -0.47
+ H                     0.       -0.76     -0.47
+ GradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGradGrad
+ Berny optimization.
+    25 basis functions,    48 primitive gaussians,    25 cartesian basis functions
+     5 alpha electrons        5 beta electrons
+ NBasis=    25 RedAO= T EigKep=  1.00D-02  NBF=    25
+ SCF Done:  E(RB3LYP) =  -76.4089520000     A.U. after   10 cycles
+ Population analysis using the SCF Density.
+ Alpha  occ. eigenvalues --  -19.13000  -1.01000  -0.52000  -0.37000  -0.29000
+ Alpha virt. eigenvalues --    0.06000   0.15000   0.75000   0.81000
+ Mulliken charges:
+               1
+     1  O   -0.900000
+     2  H    0.450000
+     3  H    0.450000
+ Sum of Mulliken charges =   0.00000
+ Optimization completed.
+    -- Stationary point found.
+ SCF Done:  E(RB3LYP) =  -76.4089651230     A.U. after    8 cycles
+ **********************************************************************
+
+            Population analysis using the SCF Density.
+
+ **********************************************************************
+
+ Alpha  occ. eigenvalues --  -19.13834  -0.99797  -0.51838  -0.37213  -0.29230
+ Alpha virt. eigenvalues --    0.06639   0.15196   0.76290   0.80612   1.16234
+ Alpha virt. eigenvalues --    1.18129   1.24536  -1000.12345-1000.54321
+          Condensed to atoms (all electrons):
+               1          2          3
+     1  O    8.281146   0.256710   0.256710
+ Mulliken charges:
+               1
+     1  O   -0.794565
+     2  H    0.397283
+     3  H    0.397283
+ Sum of Mulliken charges =   0.00000
+ Mulliken charges with hydrogens summed into heavy atoms:
+               1
+     1  O    0.000000
+ Electronic spatial extent (au):  <R**2>=             19.1564
+ Charge=              0.0000 electrons
+ Dipole moment (field-independent basis, Debye):
+    X=              0.0000    Y=              0.0000    Z=             -2.6187  Tot=              2.6187
+ Hirshfeld charges, spin densities, dipoles, and CM5 charges using IRadAn=      4:
+              Q-H        S-H        Dx         Dy         Dz        Q-CM5
+     1  O   -0.371010   0.000000   0.000000   0.000000  -0.202543  -0.700211
+     2  H    0.185505   0.000000   0.000000   0.103224   0.084577   0.350106
+     3  H    0.185505   0.000000   0.000000  -0.103224   0.084577   0.350106
+       Tot   0.000000   0.000000   0.000000   0.000000  -0.033389   0.000000
+
+ Summary of Natural Population Analysis:
+
+                                       Natural Population
+                Natural  -----------------------------------------------
+    Atom  No    Charge         Core      Valence    Rydberg      Total
+ -----------------------------------------------------------------------
+      O    1   -0.97432      1.99983     6.96377    0.01072     8.97432
+      H    2    0.48716      0.00000     0.51123    0.00161     0.51284
+      H    3    0.48716      0.00000     0.51123    0.00161     0.51284
+ =======================================================================
+   * Total *    0.00000      1.99983     7.98623    0.01394    10.00000
+
+ Normal termination of Gaussian 16 at Sat Nov 21 10:00:00 2026.
+ Link1:  Proceeding to internal job step number  2.
+ ----------------------------------------------------------------------
+ #P Geom=AllCheck Guess=TCheck SCRF=Check GenChk RB3LYP/6-31G(d) Freq
+ ----------------------------------------------------------------------
+ Charge =  0 Multiplicity = 1
+ SCF Done:  E(RB3LYP) =  -76.4089651231     A.U. after    1 cycles
+ Alpha  occ. eigenvalues --  -19.13834  -0.99797  -0.51838  -0.37213  -0.29230
+ Alpha virt. eigenvalues --    0.06639   0.15196   0.76290   0.80612   1.16234
+ Mulliken charges:
+               1
+     1  O   -0.794565
+     2  H    0.397283
+     3  H    0.397283
+ Sum of Mulliken charges =   0.00000
+ Dipole moment (field-independent basis, Debye):
+    X=              0.0000    Y=              0.0000    Z=             -2.6187  Tot=              2.6187
+ APT charges:
+               1
+     1  O   -0.611300
+     2  H    0.305650
+     3  H    0.305650
+ Sum of APT charges =   0.00000
+ Exact polarizability:   7.005   0.000   5.300   0.000   0.000   6.200
+ Harmonic frequencies (cm**-1), IR intensities (KM/Mole), Raman scattering
+ activities (A**4/AMU), depolarization ratios for plane and unpolarized
+ incident light, reduced masses (AMU), force constants (mDyne/A),
+ and normal coordinates:
+                      1                      2                      3
+                     A1                     A1                     B2
+ Frequencies --   1713.0012              3727.6631              3849.4567
+ Red. masses --      1.0827                 1.0453                 1.0817
+ - Thermochemistry -
+ Temperature   298.150 Kelvin.  Pressure   1.00000 Atm.
+ Zero-point correction=                           0.021012 (Hartree/Particle)
+ Thermal correction to Energy=                    0.023847
+ Thermal correction to Enthalpy=                  0.024791
+ Thermal correction to Gibbs Free Energy=         0.003373
+ Sum of electronic and zero-point Energies=            -76.387953
+ Sum of electronic and thermal Energies=               -76.385118
+ Sum of electronic and thermal Enthalpies=             -76.384174
+ Sum of electronic and thermal Free Energies=          -76.405592
+ Job cpu time:       0 days  0 hours  1 minutes 12.3 seconds.
+ Elapsed time:       0 days  0 hours  0 minutes 20.5 seconds.
+ Normal termination of Gaussian 16 at Sat Nov 21 10:00:30 2026.

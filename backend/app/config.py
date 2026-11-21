@@ -25,9 +25,9 @@ FRONTEND_DIST = ROOT / "frontend" / "dist"
 # Defaults for external tool paths / AI provider selection. These are merged
 # with whatever the user persists in settings.json.
 DEFAULT_SETTINGS: dict = {
-    "gaussian_path": "",          # e.g. /opt/g16/g16  (local Gaussian executable)
+    "gaussian_path": "",          # e.g. /opt/g16/g16 or D:\gauss\G09W\g09w.exe
     "multiwfn_path": "",          # e.g. /opt/Multiwfn/Multiwfn
-    "vmd_path": "/home/heyihao/vmd/vmd",
+    "vmd_path": "",               # e.g. /usr/local/bin/vmd or D:\VMD\vmd.exe
     "active_provider_id": "mock", # provider id used for chat when none pinned
     "active_model": "",           # model id within the active provider
     "providers": [],              # list of provider configs (see ai.provider)

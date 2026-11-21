@@ -9,7 +9,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from .wsl import is_windows_path, on_wsl, exe_linux_path
+from .wsl import is_windows_path, on_windows, on_wsl, exe_linux_path
 
 
 def render(
@@ -23,10 +23,10 @@ def render(
     script = vmd_dir / "render.vmd"
     script.write_text(script_text, encoding="utf-8")
 
-    windows = is_windows_path(vmd_path) and on_wsl()
+    windows_via_wsl = is_windows_path(vmd_path) and on_wsl()
     exe = (
         exe_linux_path(vmd_path, ["vmd.exe", "vmd"])
-        if windows else vmd_path
+        if (windows_via_wsl or on_windows()) else vmd_path
     )
     try:
         proc = subprocess.run(

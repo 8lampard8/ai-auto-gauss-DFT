@@ -1,14 +1,17 @@
 """Streaming chat endpoint (Server-Sent Events).
 
-Beyond plain chat, this endpoint auto-imports a molecule mentioned in the
-conversation: it extracts a molecule name (LLM for real providers, heuristic
-for the Mock), resolves it to SMILES via PubChem/CIR, builds the 3D model,
-and emits a ``molecule`` SSE event so the frontend viewer updates — letting
-the user model a structure directly from the dialog.
+Beyond plain chat, this endpoint:
+- auto-imports a molecule mentioned in the conversation (LLM / heuristic ->
+  PubChem/CIR -> RDKit 3D model -> ``molecule`` SSE event)
+- grounds the system prompt with the active molecule's RDKit descriptors and
+  optional job quantum summary from ``req.context``
+- runs blocking network/RDKit calls off the asyncio event loop
 """
 from __future__ import annotations
 
+import asyncio
 import json
+import re
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
@@ -18,9 +21,11 @@ from ..ai.prompts import EXTRACT_PROMPT, SYSTEM_PROMPT
 from ..ai.provider import ChatMessage
 from ..ai.router import active_model, get_provider
 from ..ai.web_search import format_search_context, search_web
+from ..chemistry.descriptors import brief_summary
 from ..chemistry.importer import from_smiles
 from ..chemistry.name_resolver import heuristic_extract, resolve_smiles
-from ..molecules_store import save as save_molecule
+from ..jobs_store import get as get_job
+from ..molecules_store import load as load_molecule, save as save_molecule
 from ..schemas import ChatRequest
 
 router = APIRouter(tags=["chat"])
@@ -28,6 +33,27 @@ router = APIRouter(tags=["chat"])
 
 def _evt(obj: dict) -> str:
     return f"data: {json.dumps(obj, ensure_ascii=False)}\n\n"
+
+
+def _parse_json_lenient(raw: str) -> dict:
+    """Parse JSON even if wrapped in ```json ... ``` fences."""
+    s = (raw or "").strip()
+    if not s:
+        return {}
+    s = re.sub(r"^```(?:json)?\s*", "", s, flags=re.I)
+    s = re.sub(r"\s*```$", "", s)
+    try:
+        obj = json.loads(s)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        m = re.search(r"\{.*\}", s, re.S)
+        if m:
+            try:
+                obj = json.loads(m.group(0))
+                return obj if isinstance(obj, dict) else {}
+            except Exception:
+                pass
+    return {}
 
 
 async def _try_import(provider, model: str | None, last_user_text: str):
@@ -43,9 +69,7 @@ async def _try_import(provider, model: str | None, last_user_text: str):
     else:
         try:
             raw = await provider.extract_json(EXTRACT_PROMPT, last_user_text, model)
-            ext = json.loads(raw) if raw else {}
-            if not isinstance(ext, dict):
-                ext = {}
+            ext = _parse_json_lenient(raw)
         except Exception:
             ext = {}
 
@@ -57,16 +81,48 @@ async def _try_import(provider, model: str | None, last_user_text: str):
     if not smiles:
         if is_smiles_input:
             return None, "(未能识别你提供的 SMILES)"
-        smiles = resolve_smiles(name)
+        smiles = await asyncio.to_thread(resolve_smiles, name)
         if not smiles:
             return None, f"(未能检索到「{name}」的 SMILES,可在左侧手动导入)"
     display_name = "SMILES结构" if is_smiles_input else name
     try:
-        mol = from_smiles(smiles, display_name)
+        mol = await asyncio.to_thread(from_smiles, smiles, display_name)
         mol = save_molecule(mol)
         return mol, ""
     except Exception as e:
         return None, f"(建模失败:{e})"
+
+
+def _context_block(mol, context: dict) -> str:
+    """Build a concise molecule + job descriptor block for the system prompt."""
+    lines: list[str] = []
+    active_mol = mol
+    if active_mol is None and context.get("molecule_id"):
+        try:
+            active_mol = load_molecule(str(context["molecule_id"]))
+        except Exception:
+            active_mol = None
+
+    if active_mol is not None:
+        desc = brief_summary(active_mol)
+        lines.append(
+            f"[当前分子] 名称: {active_mol.name}; SMILES: {active_mol.smiles or '无'}; "
+            f"电荷/多重度: {active_mol.charge} {active_mol.multiplicity}; "
+            f"原子数: {len(active_mol.atoms)}"
+            + (f"; 描述符: {desc}" if desc else "")
+        )
+
+    job_id = context.get("job_id")
+    if job_id:
+        j = get_job(str(job_id))
+        if j:
+            summary = j.get("summary") or {}
+            lines.append(
+                f"[当前任务] {j.get('id')} ({j.get('status')}) "
+                f"{j.get('molecule_name')} · {j.get('spec_label')}"
+                + (f"; DFT 摘要: {json.dumps(summary, ensure_ascii=False)}" if summary else "")
+            )
+    return "\n".join(lines)
 
 
 @router.post("/chat")
@@ -81,12 +137,12 @@ async def chat(req: ChatRequest) -> StreamingResponse:
 
     mol, note = await _try_import(provider, model, last_user_text)
 
-    # Web search augmentation
+    # Web search augmentation (offload sync HTTP to worker thread)
     search_results: list[dict] = []
     search_query = ""
     if req.web_search and last_user_text:
         search_query = last_user_text[:120]
-        search_results = search_web(search_query)
+        search_results = await asyncio.to_thread(search_web, search_query)
 
     sys_text = SYSTEM_PROMPT
     if mol:
@@ -96,8 +152,16 @@ async def chat(req: ChatRequest) -> StreamingResponse:
         )
     elif note:
         sys_text += f"\n[系统]{note}"
+
+    ctx_text = await asyncio.to_thread(_context_block, mol, req.context or {})
+    if ctx_text:
+        sys_text += "\n\n" + ctx_text
+
     if search_results:
         sys_text += "\n\n" + format_search_context(search_query, search_results)
+
+    if (req.context or {}).get("lang") == "en":
+        sys_text += "\n\n[Language] The user interface is set to English. Please reply concisely in English."
 
     msgs: list[ChatMessage] = [ChatMessage(role="system", content=sys_text)]
     for m in req.messages:
@@ -111,10 +175,6 @@ async def chat(req: ChatRequest) -> StreamingResponse:
                 "query": search_query,
                 "count": len(search_results),
                 "results": [{"title": r["title"], "url": r["url"]} for r in search_results],
-            })
-            yield _evt({
-                "type": "delta",
-                "content": f"🔍 已联网搜索「{search_query}」({len(search_results)} 条结果)\n\n",
             })
         if mol:
             yield _evt({"type": "molecule", "molecule": mol.model_dump()})

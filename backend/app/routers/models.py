@@ -104,7 +104,8 @@ def add_provider(p: ProviderInput) -> dict:
         raise HTTPException(409, f"provider id '{p.id}' already exists")
     providers.append(p.model_dump())
     s["providers"] = providers
-    return save(s) and public_view()
+    save(s)
+    return public_view()
 
 
 @router.put("/models/providers/{pid}")

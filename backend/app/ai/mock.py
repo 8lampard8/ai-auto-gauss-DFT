@@ -67,6 +67,13 @@ _REPLIES = [
         "ESP 映射到 vdW 表面(BWR 配色)。详见 .A.13。",
     ),
     (
+        {"描述符", "descriptor", "qsar", "logp", "tpsa", "概念dft", "硬度", "亲电"},
+        "分子描述符提取已集成在左侧「描述符」页面:\n"
+        "• 结构描述符 (RDKit): 分子式、分子量、logP、TPSA、HBD/HBA、QED、Lipinski 规则、拓扑指数、3D 形状(Rg/PMI/NPR/PBF/vdW 体积)及全部 ~217 项 2D 描述符。\n"
+        "• 量化描述符 (Gaussian .log/.out): SCF 能量、HOMO/LUMO/能隙、概念 DFT 反应性指数(I/A/χ/μ/η/S/ω/ω⁻/ω⁺)、偶极矩、极化率、ZPE/H/G、虚频数、TD-DFT 激发态、Mulliken/APT/Hirshfeld/CM5/NPA 原子电荷。\n"
+        "• 支持直接上传 .log/.out 解析,以及多分子/任务/SMILES 批量提取并导出 CSV/JSON 用于机器学习建模。",
+    ),
+    (
         {"igmh", "iri", "nci", "弱相互"},
         "弱相互作用(IGMH):Multiwfn 载入 .fch → 主功能 20 → 4(IGMH)→ 高质量网格 → "
         "导出 func1.cub/func2.cub → 与 IGMHfill.vmd 一起移入 VMD 目录 → "

@@ -1,9 +1,11 @@
-"""WSL path helpers for invoking Windows tools from the Linux backend.
+"""Cross-platform / WSL path helpers for invoking external chemistry tools.
 
-The backend runs in WSL2; users may configure Windows-side Gaussian,
-Multiwfn and VMD (e.g. ``D:\\gauss\\G09W\\g09w.exe``). These helpers
-translate between Windows and Linux (``/mnt/<drive>/...``) path forms so the
-backend can stage files and invoke the Windows executables via WSL interop.
+Supports three runtime environments transparently:
+1. **WSL2 (Linux backend -> Windows tools)**: translates ``D:\\...`` to
+   ``/mnt/d/...`` for file staging and passes Windows-form paths to Windows
+   executables invoked via WSL interop.
+2. **Native Windows**: keeps Windows paths as-is.
+3. **Native Linux / macOS**: keeps POSIX paths as-is.
 """
 from __future__ import annotations
 
@@ -23,9 +25,13 @@ def on_wsl() -> bool:
     return sys.platform == "linux" and Path("/mnt/c").exists()
 
 
+def on_windows() -> bool:
+    return sys.platform == "win32"
+
+
 def to_linux_path(p: str) -> str:
-    """Windows path -> /mnt/<drive>/... ; pass through if already Linux."""
-    if not is_windows_path(p):
+    """Windows path -> /mnt/<drive>/... on WSL; unchanged on native Windows/Linux."""
+    if not is_windows_path(p) or not on_wsl():
         return p
     try:
         r = subprocess.run(["wslpath", "-u", p], capture_output=True,
@@ -40,7 +46,11 @@ def to_linux_path(p: str) -> str:
 
 
 def to_windows_path(p: str) -> str:
-    """/mnt/d/... (or Windows) path -> Windows form D:\\..."""
+    """/mnt/d/... -> D:\\... on WSL; unchanged on native Windows."""
+    if on_windows():
+        return str(Path(p))
+    if not on_wsl():
+        return p
     try:
         r = subprocess.run(["wslpath", "-w", p], capture_output=True,
                            text=True, timeout=5)
@@ -55,23 +65,21 @@ def to_windows_path(p: str) -> str:
 
 
 def exe_linux_path(tool_path: str, candidates: list[str]) -> str:
-    """Resolve a tool to its Linux /mnt executable path.
-
-    If ``tool_path`` is a directory, look for one of ``candidates`` inside it
-    (e.g. ``Multiwfn.exe``). Otherwise translate the path to /mnt form.
-    """
-    linux = to_linux_path(tool_path)
-    p = Path(linux)
+    """Resolve a tool path (file or directory) to a host-runnable executable."""
+    resolved = to_linux_path(tool_path)
+    p = Path(resolved)
     if p.is_dir():
         for name in candidates:
             cand = p / name
             if cand.exists():
                 return str(cand)
-    return linux
+    return resolved
 
 
 def tool_dir(tool_path: str) -> Path:
     """The install directory of a tool (parent if given an exe, itself if a dir)."""
-    linux = to_linux_path(tool_path)
-    p = Path(linux)
-    return p.parent if p.is_file() else p
+    resolved = to_linux_path(tool_path)
+    p = Path(resolved)
+    if p.is_file() or p.suffix.lower() in (".exe", ".bat", ".cmd", ".sh"):
+        return p.parent
+    return p

@@ -6,18 +6,20 @@ path param would shadow them.
 """
 from __future__ import annotations
 
+import shutil
 import uuid
 from pathlib import Path
 
 import psutil
 from fastapi import APIRouter, HTTPException
 
-from ..config import LOCAL_MEM_FRACTION, LOCAL_RESERVE_CORES
+from ..config import JOBS_DIR, LOCAL_MEM_FRACTION, LOCAL_RESERVE_CORES
 from ..exec.local_runner import cancel_local, submit_local
 from ..exec.ssh_runner import cancel_ssh, submit_ssh
 from ..jobs_store import create as create_job, delete as delete_job, get as get_job, list_all
 from ..molecules_store import load as load_molecule
 from ..schemas import CreateJobRequest, SshProfile
+from ..security import is_within
 from ..settings_store import (
     _mask_secrets,
     load as load_settings,
@@ -65,8 +67,9 @@ def create_job_endpoint(req: CreateJobRequest) -> dict:
         raise HTTPException(404, f"molecule {req.molecule_id} not found")
 
     if req.kind == "local":
-        nproc = req.nproc or _default_local_resources()[0]
-        mem = req.mem or _default_local_resources()[1]
+        def_nproc, def_mem = _default_local_resources()
+        nproc = req.nproc or def_nproc
+        mem = req.mem or def_mem
         gaussian_path = load_settings().get("gaussian_path", "")
     else:
         if not req.ssh_profile_id:
@@ -198,5 +201,15 @@ def cancel_job_endpoint(job_id: str) -> dict:
 
 @router.delete("/jobs/{job_id}")
 def delete_job_endpoint(job_id: str) -> dict:
+    j = get_job(job_id)
+    if j and j.get("status") in ("queued", "running"):
+        if j.get("kind") == "local":
+            cancel_local(j)
+        else:
+            cancel_ssh(j, _find_profile(j.get("ssh_profile_id", "")))
     delete_job(job_id)
+    if j and j.get("work_dir"):
+        wd = Path(j["work_dir"])
+        if wd.exists() and is_within(wd, JOBS_DIR):
+            shutil.rmtree(wd, ignore_errors=True)
     return {"ok": True}
