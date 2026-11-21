@@ -2,129 +2,206 @@
 
 [简体中文](README.md) | **English**
 
-An AI-conversation-driven web app for the full Gaussian quantum-chemistry workflow: **molecular modeling → generate gjf → submit jobs (local / SSH) → result plotting (Multiwfn / VMD)**. Switch freely between mainstream AI models and custom APIs from within the UI.
+An AI-conversation-driven web platform for the full Gaussian quantum-chemistry and cheminformatics workflow: **molecular modeling → 2D/3D editing → `.gjf` generation → job submission (local / SSH) → molecular descriptor extraction (RDKit + DFT) → wavefunction plotting (Multiwfn / VMD)**. Includes a one-click **`中文 | EN`** UI switcher and hot-swappable AI providers.
+
+---
 
 ## Features
 
-| Module | Capability |
-|--------|-----------|
-| **1 Molecular modeling** | **Conversational modeling**: say "optimize ethanol" in the chat and the AI identifies the molecule name → searches SMILES (PubChem/CIR) → builds the model, with the 3D view auto-updating. Also supports SMILES / mol / mol2 / gjf / out·log / cdxml / image import; 3Dmol.js 3D viewer; automatic charge & multiplicity inference. |
-| **2D/3D Editor** | Ketcher 2D canvas + 3Dmol 3D view, **bi-directionally synced**; one-click insertion of functional groups (-OH / -NH₂ / -COOH / -CHO / -CN / -NO₂ / -OMe / -Ac / -Ph / -SH / -SO₃H / -N₂⁺ / halides); live sync, in-place updates (no duplicate molecules); iteratively modify complex molecules. |
-| **2 Generate gjf** | Conversational querying of calculation needs; auto-recommends functional/basis-set/multiplicity/SCRF and generates a .gjf; rule-based recommender + AI dual track, editable. |
-| **3 Submit jobs** | Local (WSL2 auto-invokes Windows G09W or Linux g16 via interop; auto-detects CPU/RAM to recommend `%nproc`/`%mem`; G09W auto-capped to 4 cores / 1.5GB) + SSH remote one-click submit (nohup + polling + fetch log/fchk); job ledger with **live in-run log**; on failure, auto-extracts a readable reason (memory / basis-function count / syntax / link0 crash, etc.). |
-| **4 Descriptors** | **Structure descriptors (RDKit)** (formula, MW, logP, TPSA, HBD/HBA, QED, Lipinski/Veber, topological indices, 3D shape Rg/PMI/NPR/PBF/vdW volume, plus all ~217 2D descriptors) + **Quantum descriptors (Gaussian .log/.out)** (SCF energy, HOMO/LUMO/gap, conceptual DFT indices I/A/χ/μ/η/S/ω, dipole, polarizability, ZPE/H/G, imaginary freqs, TD-DFT excited states, Mulliken/APT/Hirshfeld/CM5/NPA atomic charges); direct `.log` upload and **batch CSV/JSON export** for QSAR/ML. |
-| **5 Result plotting** | HOMO/LUMO, ESP isosurfaces, NCI/IRI/IGM/IGMH; directory-sandboxed; drives Multiwfn + VMD (native Windows/Linux or WSL interop) to render images. |
-| **6 Model freedom** | OpenAI / Anthropic / any OpenAI-compatible (DeepSeek, Doubao/Ark, local vLLM/Ollama) / custom / Mock; add/edit/switch providers in the UI. |
+| Module | Capabilities |
+|--------|-------------|
+| **1 Molecular Modeling** | **Conversational modeling**: say *"optimize ethanol"* in Chat and the AI resolves SMILES (PubChem / CIR) and builds the 3D conformer automatically. Also supports 2D drawing, SMILES, CAS numbers (with check-digit validation), CN/EN names, and drag-and-drop for `.mol / .sdf / .mol2 / .gjf / .out / .log / .cdxml / images`. Interactive 3Dmol.js viewer with automatic charge & multiplicity inference. |
+| **2 2D/3D Editor** | Ketcher 2D canvas + 3Dmol 3D view with **bi-directional sync** and one-click functional group insertion (`-OH / -NH₂ / -COOH / -CHO / -CN / -NO₂ / -OMe / -Ac / -Ph / -SH / -SO₃H / -N₂⁺ / halides`); updates in place without duplicating molecules. |
+| **3 `.gjf` Generator** | Dual-track rule recommender + AI assistant for functionals, basis sets, dispersion, and SCRF solvation; live Gaussian basis-set validation & canonicalization (`def2-TZVP → Def2TZVP`); one-click *"Load in Editor"* from AI chat code blocks. |
+| **4 Job Submission** | **Local execution** (native Windows G09W/G16W, WSL2 interop, and Linux `g16`; auto-probes CPU/RAM for `%nproc`/`%mem`; automatic 32-bit G09W 4-core/1500MB capping and link0-crash retry) + **SSH remote submission** (`$HOME` expansion, `nohup` + polling + remote `formchk` + `.log`/`.fchk` retrieval); auto-parses summary badges (`E`, `Gap`, `μ`, `G`, `Nimag`) and actionable error diagnostics. |
+| **5 Molecular Descriptors** | **RDKit 2D/3D descriptors** (basic, physicochemical/drug-likeness, topological indices, 3D shape Rg/PMI/NPR/PBF/vdW volume, plus all ~217 2D descriptors) + **Gaussian DFT quantum descriptors** (SCF energy, HOMO/LUMO/gap, conceptual DFT indices $I, A, \chi, \mu, \eta, S, \omega, \omega^-, \omega^+$, dipole, polarizability, thermochemistry ZPE/H/G/TS, imaginary frequencies, TD-DFT excited states, and Mulliken/APT/Hirshfeld/CM5/NPA atomic charge tables). Supports **direct `.log/.out` upload** and **batch QSAR/ML CSV/JSON export**. |
+| **6 Result Plotting** | HOMO/LUMO, ESP isosurfaces, NCI / IRI / IGM / IGMH; reads exact atom/electron counts from `.fchk` headers; directory-sandboxed Multiwfn + VMD rendering. |
+| **7 Bilingual & Model Freedom** | Top-bar **`中文 | EN`** toggle (persisted in `localStorage`, synced with AI chat language); supports OpenAI, Anthropic, DeepSeek, Doubao Ark, local vLLM/Ollama, any OpenAI-compatible API, and offline Mock mode. |
+
+---
+
+## Requirements
+
+- **Python** ≥ 3.10 (3.11–3.13 recommended, with `rdkit`)
+- **Node.js** ≥ 18 (20/22 LTS recommended)
+- **Optional external tools** (modeling, descriptor extraction, `.gjf` generation, and Mock chat all work without them):
+  - Gaussian (Linux `g16`/`g09`, or Windows `G09W`/`G16W`)
+  - Multiwfn 3.8(dev) & VMD (only needed for wavefunction plotting)
+
+---
+
+## Quick Start
+
+### Linux / macOS / WSL2
+
+```bash
+git clone https://github.com/8lampard8/ai-auto-gauss-DFT.git
+cd ai-auto-gauss-DFT
+
+# 1. Create virtualenv & install backend dependencies
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+
+# 2. Install frontend dependencies
+npm install --prefix frontend
+
+# 3. Launch both backend (:8000) and frontend (:5173)
+./dev.sh
+```
+
+Open **http://localhost:5173** in your browser.
+
+### Windows (PowerShell)
+
+```powershell
+git clone https://github.com/8lampard8/ai-auto-gauss-DFT.git
+cd ai-auto-gauss-DFT
+
+# 1. Create virtualenv & install backend dependencies
+python -m venv .venv
+.\.venv\Scripts\pip.exe install -r backend\requirements.txt
+
+# 2. Install frontend dependencies
+npm install --prefix frontend
+
+# 3. Terminal 1: Start backend (use --port 8001 if 8000 is occupied)
+cd backend
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# 4. Terminal 2: Start frontend dev server
+# (If backend runs on 8001, set $env:VITE_API_TARGET='http://127.0.0.1:8001' first)
+cd frontend
+npm run dev
+```
+
+Open **http://localhost:5173** in your browser.
+
+### Single-Port Production Build
+
+```bash
+npm run build --prefix frontend            # outputs frontend/dist
+cd backend
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+# FastAPI serves the built SPA directly at http://localhost:8000
+```
+
+> **Note**: Without an API key or Gaussian/Multiwfn configured, the app runs in **Mock mode** so you can explore the entire interface immediately.
+
+---
+
+## How to Use (Step-by-Step Workflow)
+
+### 1. Switch Language & Configure AI / Tool Paths
+- **Language Toggle**: Click **`中文 | EN`** in the top bar to switch the entire interface and descriptor labels instantaneously (saved in `localStorage`; AI chat replies follow the selected language).
+- **AI Providers**: Open **⚙️ Settings**, pick a preset (OpenAI / Anthropic / DeepSeek / Doubao Ark / local vLLM·Ollama) or enter custom credentials, click **Test**, then **Set Active**.
+- **External Paths**: Enter local paths for Gaussian (`g16` or `g09w.exe`), Multiwfn, and VMD at the bottom of **Settings**.
+
+### 2. Import or Edit Molecules (🧪 Modeling / ✏️ Editor)
+- **Chat-to-3D**: Ask in **💬 Chat** (e.g. *"optimize aspirin"* or paste a SMILES) to auto-resolve and build the 3D model.
+- **Manual Import**: In **🧪 Modeling**, choose **Draw** (Ketcher), **SMILES**, **CAS** (e.g. `64-17-5`), **By Name** (including exact C60 fullerene geometry), or drag-and-drop `.mol / .sdf / .mol2 / .gjf / .out / .log / .cdxml / .png`.
+- **Bi-directional 2D/3D Editing**: Open **✏️ Editor** to modify structures on the Ketcher 2D canvas, insert common functional groups in one click, and live-sync changes to the 3D viewer.
+
+### 3. Generate `.gjf` & Submit Jobs (🧪 Modeling → 🧮 Jobs)
+1. Pick Task Type (OPT / FREQ / OPT+FREQ / SP / TS / QST2 / TD-DFT / IRC / Scan / NMR), Solvent, and Accuracy in the `.gjf` Generator card.
+2. Click **Recommend** → **Generate gjf** (or click **Load in Editor** on any ```gjf block generated in Chat), then edit freely if needed.
+3. Click **Submit Job** and choose **Local** (auto-fills recommended `%nprocshared`/`%mem`) or **Remote SSH** (key or password auth, automatic `formchk` and log/fchk retrieval).
+4. Monitor live logs, download `.gjf`/`.log`, and view parsed DFT summary badges (`E`, `Gap`, `μ`, `G`, `Nimag`) in **🧮 Jobs**.
+
+### 4. Extract Molecular Descriptors & Batch Export (🧬 Descriptors)
+Open **🧬 Descriptors** from the sidebar (or click **🧬 Descriptors** directly from any 3D molecule or job card):
+
+- **Single Molecule / Job**:
+  - Pick a **saved molecule** → **Extract 2D/3D** for RDKit basic, physicochemical/drug-likeness, topological, and 3D shape descriptors.
+  - Pick a **job with log** → **Extract DFT + 2D/3D** for combined quantum-chemical and optimized-geometry structural descriptors.
+  - **Upload / Drop `.log` / `.out`** directly to parse any external Gaussian output file on the fly (including color-coded Mulliken/APT/Hirshfeld/CM5/NPA atomic charge tables and TD-DFT excited states).
+  - Toggle **Include all RDKit 2D (~217)** for the full RDKit descriptor set, search/filter live, click any row to copy, or export **CSV / JSON**.
+- **Batch Extract & Export (QSAR / ML)**:
+  - Switch to the **Batch Extract & Export (QSAR/ML)** tab.
+  - Select any mix of saved molecules, jobs with logs, and pasted SMILES lines (`CCO,ethanol`, `c1ccccc1,benzene`, `ethanol CCO`, etc.).
+  - Preview the unified feature matrix or download directly as **CSV (UTF-8 BOM for Excel / pandas / scikit-learn)** or **JSON**.
+
+#### Descriptor REST API Examples
+```bash
+# Single molecule RDKit descriptors (full=true includes all ~217 2D descriptors)
+curl "http://127.0.0.1:8000/api/descriptors/molecule/<molecule_id>?full=true"
+
+# Completed job DFT + RDKit descriptors
+curl "http://127.0.0.1:8000/api/descriptors/job/<job_id>"
+
+# Batch extract & download CSV
+curl -X POST http://127.0.0.1:8000/api/descriptors/export \
+  -H "Content-Type: application/json" \
+  -d '{"smiles_list":["CCO,ethanol","c1ccccc1,benzene"],"include_all_rdkit":false,"format":"csv"}' \
+  -o descriptors.csv
+```
+
+### 5. Wavefunction Plotting (📊 Plot)
+Open **📊 Plot** → select a recipe (HOMO / LUMO / ESP / NCI / IRI / IGM / IGMH) and a succeeded job with `.fchk` → customize Multiwfn / VMD scripts if desired → click **Run Plot** to render and inspect images and logs inline.
+
+---
 
 ## Architecture
 
-```
+```text
 ai-auto-gauss-DFT/
-├── backend/                 Python 3.13 + FastAPI
-│   └── app/
-│       ├── main.py          FastAPI entry (CORS + static mount)
-│       ├── config.py        paths & default settings
-│       ├── schemas.py       Pydantic models
-│       ├── settings_store.py settings persistence (0600, masked keys)
-│       ├── molecules_store.py molecule JSON persistence
-│       ├── jobs_store.py    SQLite job ledger
-│       ├── security.py      path sandbox + key masking
-│       ├── routers/         system / models / chat / molecules / descriptors / gjf / jobs / visualize
-│       ├── chemistry/       importer / name_resolver / descriptors / gaussian_parser / gjf_writer / method_recommender / plot_recipes / knowledge
-│       ├── ai/              provider abstraction / openai / anthropic / mock / router / prompts
-│       └── exec/            local_runner / ssh_runner / multiwfn_runner / vmd_runner
-├── frontend/                React + Vite + TypeScript + 3Dmol.js + zustand + Ketcher
-│   └── src/{App.tsx, store.ts, types.ts, api/client.ts, components/}
-├── data/                    uploads / job work dirs / plot outputs / app.db / settings.json
-└── dev.sh                   one-command start: backend (:8000) + frontend (:5173)
+├── backend/                     Python 3.13 + FastAPI
+│   ├── app/
+│   │   ├── main.py              FastAPI entry (CORS + startup orphan-job recovery + SPA mount)
+│   │   ├── config.py            Paths & default settings
+│   │   ├── schemas.py           Pydantic models
+│   │   ├── settings_store.py    Settings persistence (0600, masked secrets)
+│   │   ├── molecules_store.py   Atomic molecule JSON store (path-traversal safe)
+│   │   ├── jobs_store.py        Thread-safe SQLite WAL job ledger
+│   │   ├── security.py          Directory sandbox + secret masking
+│   │   ├── routers/             system / models / chat / molecules / descriptors / gjf / jobs / visualize
+│   │   ├── chemistry/           importer / name_resolver / descriptors / gaussian_parser / gjf_writer / method_recommender / basis_sets / plot_recipes / knowledge
+│   │   ├── ai/                  provider / openai / anthropic / mock / router / prompts / web_search
+│   │   └── exec/                local_runner / ssh_runner / multiwfn_runner / vmd_runner / wsl
+│   └── tests/                   pytest unit & API integration tests
+├── frontend/                    React + Vite + TypeScript + 3Dmol.js + Zustand + Ketcher
+│   └── src/
+│       ├── i18n.ts              CN/EN bilingual dictionary (UI + descriptor labels/hints)
+│       ├── store.ts             Zustand state store
+│       ├── types.ts             TypeScript interfaces
+│       ├── api/client.ts        REST / SSE / blob download client
+│       └── components/          Modeling / MoleculeEditor / Chat / Jobs / Descriptors / Plot / Settings
+├── data/                        Uploads / job dirs / plots / app.db / settings.json (gitignored)
+└── dev.sh                       Linux/macOS/WSL2 one-command launcher
 ```
 
-## Quick start
+---
+
+## Running Tests
 
 ```bash
-cd ai-auto-gauss-DFT
-
-# backend deps
-python3 -m pip install -r backend/requirements.txt
-
-# frontend deps
-npm install --prefix frontend
-
-# start both
-./dev.sh
-# open http://localhost:5173
+cd backend
+python -m pytest -v
 ```
 
-> Without an API key or Gaussian/Multiwfn configured, the app runs in **Mock provider** mode and simulates the full flow. Set keys and paths in **Settings** to go live.
+```bash
+cd frontend
+npx tsc --noEmit && npm run build
+```
 
-## Workflow
-
-1. **Import a molecule**: say "optimize ethanol" in **Chat** — the AI auto-detects the name, searches SMILES (PubChem/CIR) and builds the model, shown in the 3D view. Or manually import via SMILES, name search, or drag in `.mol/.mol2/.gjf/.out/.cdxml/.png`.
-2. **Generate gjf via chat**: describe your need (e.g. "opt + freq, water solvent"). With Mock, keywords trigger examples; with a real AI, it recommends a method and outputs a ```gjf block — click "load into editor".
-3. **gjf editor**: pick task/solvent/accuracy → "Recommend method" → "Generate gjf" → edit manually → "Submit job".
-4. **Submit jobs**: switch to the **Jobs** tab; local auto-fills nproc/mem, SSH picks a node; "one-click submit". Live polling; on completion download log/gjf; on local success, formchk auto-generates a .fchk.
-5. **Plot results**: top-bar **Plot** → pick a plot type + a succeeded job with .fchk → (editable Multiwfn sequence & VMD script) → "Run plot"; the image is shown inline, logs expandable.
-
-## 2D/3D Molecule Editor
-
-Enter via the **Editor** item in the left nav — a two-column layout:
-- **Left: Ketcher 2D canvas** — draw atoms/bonds/rings/charges/stereo; toolbar inserts **functional groups** in one click (-OH / -NH₂ / -COOH / -CHO / -CN / -NO₂ / -OMe / -Ac / -Ph / -SH / -SO₃H / -N₂⁺ / -F / -Cl / -Br / -I), then bond them to the main molecule.
-- **Right: 3Dmol 3D view** — live 3D conformer of the current molecule.
-- **Bi-directional sync**: switching molecules loads them into the canvas (3D→2D); "Sync to 3D" or the live-sync toggle updates the 3D from the canvas SMILES in place (2D→3D, same id — no duplicate molecules).
-- Use case: incrementally add/remove groups or atoms on complex molecules (drugs, fullerenes…) with the 3D following live, then return to **Modeling** to generate gjf and submit.
-
-> Ketcher (Indigo WASM) is heavy; it loads on demand (a few seconds) the first time you open **Editor** or the draw dialog.
-
-## UI
-
-Bright, clean, card-based design (light background, rounded cards, blue accent, left nav + top bar + card workspace). Nav: Modeling / Editor / Chat / Jobs / Plot / Settings. The chat panel has a persistent draggable scrollbar + a "↓ latest" button. Any render crash is caught by a top-level ErrorBoundary and shown as an error message (no white screen).
+---
 
 ## Security
 
-- `data/settings.json` is mode 0600; API keys / SSH passwords are **masked** in API responses and never logged.
-- Plotting is allowed to write **only** inside the configured Multiwfn and VMD directories (path sandbox; rejects `..` and absolute-path escapes).
-- The gjf is written to a file and run by `g16` — no shell string interpolation, so no injection.
-- SSH prefers key files; credentials are not exposed.
+- `data/settings.json` is mode `0600` (gitignored); API keys and SSH passwords are **masked** in API responses and never logged.
+- Plotting and job cleanup enforce strict directory sandboxes (rejecting `..` and out-of-root paths).
+- Local Gaussian invocations avoid shell string concatenation and SSH remote commands are quoted via `shlex.quote`.
 
-## AI Provider config
-
-**Settings** → pick a preset (OpenAI / Anthropic / DeepSeek / Doubao Ark / local vLLM) or fill manually:
-- **Kind**: `openai` (OpenAI protocol) / `custom` (OpenAI-compatible custom base_url) / `anthropic` / `mock`
-- **Base URL / API Key / model list / default model**
-- "Test" verifies connectivity; "Set active" lets the top-bar dropdown switch models anytime.
-
-## Key technical decisions
-
-- **SCRF / solvation**: per gaussian.com/scrf and the sobko knowledge base — G16 defaults to PCM (IEFPCM), `scrf=(pcm,solvent=...)`; SMD for ΔG_solv; non-electrostatic terms need `read`+`Dis/Rep/Cav`. The recommender defaults to PCM for aqueous.
-- **Method recommendation**: organic optimization B3LYP-D3(BJ)/def2-TZVP; transition states `opt=(ts,calcfc,noeigentest)`; excited states PBE0/CAM-B3LYP; heavy atoms get def2 ECPs automatically.
-- **Plotting** (sobko manual, authority A): IGMH main 20→4 exports func1/func2.cub + `IGMHfill.vmd`; ESP via main 12 surface analysis; HOMO/LUMO via main 0 orbital cube. Menu numbers may differ slightly across Multiwfn versions — the frontend scripts are editable.
-
-## Production deployment
-
-```bash
-npm run build --prefix frontend          # produces frontend/dist
-cd backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
-# FastAPI auto-mounts dist at /; visit http://host:8000
-```
+---
 
 ## Roadmap
 
-- [x] Phase 1 scaffold (FastAPI + Vite/React, health check, hardware probe)
-- [x] Phase 2 AI provider abstraction + streaming chat + settings persistence
-- [x] Phase 3 molecule import + 3Dmol viewer
-- [x] Phase 4 gjf writer + method recommender + editor
-- [x] Phase 5 job submission (local + SSH) + job ledger
-- [x] Phase 6 result plotting (Multiwfn + VMD, sandboxed)
-- [x] Phase 7 end-to-end run-through + docs
-- [x] 2D/3D synced editor (Ketcher) + functional groups
-- [x] Molecular descriptor extraction (RDKit 2D/3D + Gaussian DFT) + batch CSV/JSON export
-- [x] Bilingual UI switcher (`中文` / `EN`) in TopBar
-
-## Future work
-
-- SLURM/PBS queue integration (SSH currently uses nohup direct run)
-- Batch / parametric scans, IRC auto-chaining
-- Binary CDX, NMR/UV-Vis spectrum plotting
+- [x] Core workflow: AI chat, molecular modeling, `.gjf` generation, local/SSH submission, Multiwfn/VMD plotting
+- [x] 2D/3D bi-directionally synced editor (Ketcher + functional group shortcuts) & CAS import
+- [x] Molecular descriptor extraction (RDKit 2D/3D + Gaussian DFT parser + batch QSAR/ML CSV/JSON export)
+- [x] Bilingual **`中文 | EN`** UI switcher & unified Windows / WSL2 / Linux runner support
+- [ ] SLURM / PBS queue integration
+- [ ] Parametric scans, IRC auto-chaining, and NMR / UV-Vis spectrum plotting
 
 ## License
 
